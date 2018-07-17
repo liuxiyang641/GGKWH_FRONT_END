@@ -69,7 +69,7 @@
             }
         },
         created:function () {
-            this.axios.get('http://2d310e3f.ngrok.io/getAll',
+            this.axios.get('http://0990581d.ngrok.io/getAll',
                 {
                     headers: {
                         'Content-Type': 'multipart/form-data',

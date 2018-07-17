@@ -8,7 +8,7 @@
                     active-text-color="#ffd04b">
                     <el-menu-item index="1">
                         <a href="/" style="color: #fff;text-decoration: none;">
-                            <span style="font-size: 20px">公共库维护</span>
+                            <span style="font-size: 20px">公 共 库 维 护</span>
                         </a>
                     </el-menu-item>
                 </el-menu>
