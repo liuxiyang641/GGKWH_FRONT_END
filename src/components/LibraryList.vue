@@ -18,7 +18,7 @@
                     <template slot-scope="scope">
                         <el-button
                             size="medium"
-                            @click="jumpTo(scope.row.name)">管理</el-button>
+                            @click="jumpTo(scope.row)">管理</el-button>
                     </template>
                 </el-table-column>
             </el-table>
@@ -48,8 +48,8 @@
         computed:{
         },
         methods:{
-            jumpTo:function (name) {
-                switch (name){
+            jumpTo:function (row) {
+                switch (row.name){
                     // 长江学者
                     case 'GG_ZJ_CJ':
                         window.location.href='/admin/';
@@ -62,8 +62,8 @@
                     case 'GG_ZJ_GCYYS':
                         window.location.href='/admin/acaofsci';
                         break;
-                    default: //默认跳转到中科院院士列表
-                        window.location.href='/admin/acaofsci';
+                    default: //默认跳转到长江学者列表
+                        window.location.href='/admin/18';
                         break;
                 }
             },

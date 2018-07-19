@@ -4,7 +4,7 @@ import LibraryList from '@/components/LibraryList'
 import AdminIndex from '@/components/AdminIndex'
 import AcaOfSciAdmin from '@/components/AcaOfSciAdmin'
 import AcaOfEngAdmin from '@/components/AcaOfEngAdmin'
-
+import GeneralAdmin from '@/components/GeneralAdmin'
 
 
 Vue.use(Router)
@@ -29,9 +29,13 @@ export default new Router({
                 {
                     path:'acaofeng',
                     component:AcaOfEngAdmin
-                }
+                },
             ]
-
+        },
+        {
+            path:'/admin/:tableId',
+            name:'GeneralAdmin',
+            component:GeneralAdmin
         }
 
     ]

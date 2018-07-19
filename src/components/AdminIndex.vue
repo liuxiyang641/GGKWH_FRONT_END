@@ -11,7 +11,7 @@
                     <a href="acaofeng">中国工程院院士</a>
                 </el-menu-item>
                 <el-menu-item index="3">
-                    <a>长江学者</a>
+                    <a href="/admin/18">长江学者</a>
                 </el-menu-item>
             </el-menu>
         </el-aside>
