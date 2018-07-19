@@ -1,9 +1,13 @@
 <template>
     <el-container>
         <el-main>
+            <!--公共库列表-->
             <el-table
-                :data="pageData"
+                :data="tableData"
                 style="width: 30%;"
+                highlight-current-row
+                v-loading="listLoading"
+                element-loading-text="拼命加载中..."
                 border>
                 <el-table-column
                     prop="chineseName"
@@ -18,10 +22,11 @@
                     </template>
                 </el-table-column>
             </el-table>
+            <!--分页-->
             <el-pagination
                 background
                 layout="prev, pager, next"
-                :total="this.tableData.length"
+                :total="49"
                 :current-page="this.pageNum"
                 @current-change="handelCurrentChange">
             </el-pagination>
@@ -37,12 +42,10 @@
                 tableData:[],
                 pageNum:1,
                 pageSize:10,
+                listLoading:true
             }
         },
         computed:{
-            pageData:function () {
-                return this.tableData.slice((this.pageNum-1)*this.pageSize,this.pageNum*this.pageSize);
-            }
         },
         methods:{
             jumpTo:function (name) {
@@ -65,25 +68,31 @@
                 }
             },
             handelCurrentChange(val){
-                this.pageNum=val
+                this.pageNum=val;
+                this.pageJumping();
+            },
+            pageJumping:function(){
+                this.listLoading=true;
+                this.axios.get(this.apiUrl+'/getAll?page='+this.pageNum+'&size='+this.pageSize,
+                    {
+                        headers: {
+                            'Content-Type': 'multipart/form-data',
+                        }
+                    }
+                ).then(
+                    res=>{
+                        if (res.status===200){
+                            this.tableData=res.data;
+                            this.listLoading=false;
+                        }
+                    }
+                ).catch(function (error) {
+                    console.log(error);
+                });
             }
         },
         created:function () {
-            this.axios.get('http://0990581d.ngrok.io/getAll',
-                {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                    }
-                }
-            ).then(
-                res=>{
-                    if (res.status===200){
-                        this.tableData=res.data
-                    }
-                }
-            ).catch(function (error) {
-                console.log(error);
-            })
+            this.pageJumping();
         }
     }
 </script>
