@@ -57,11 +57,9 @@
             <!--添加新的院士信息对话框-->
             <el-dialog title="新增院士信息" :visible.sync="dialogOfAddingNewAca">
                 <el-form :model="detailedData">
-                    <el-form-item v-for="(value, key) in detailedSetting" :label='value.name+": " ' label-width="120px" :key="key">
+                    <el-form-item v-for="(value, key) in editableSetting" :label='value.name+": " ' label-width="120px" :key="key">
                         <!--可编辑的显示输入框-->
                         <el-input v-if='value.modify==="true" ' type="textarea" autosize v-model="detailedData[key]" auto-complete="off"></el-input>
-                        <!--不可编辑的显示文本-->
-                        <span v-else>{{detailedData[key]}}</span>
                     </el-form-item>
                 </el-form>
                 <div slot="footer" class="dialog-footer">
@@ -154,6 +152,7 @@
                 // 页面设置
                 listSetting: {},     // 信息列表设置，包含key和对应的中文名
                 detailedSetting: {},   // 详细信息设置，包含key，中文名以及是否可编辑
+                editableSetting: {},     // 可编辑的信息设置
                 idSetting: {},   // 列表信息id的设置，包括id的key和类型（int与str）
                 pageName: null,   // 页面名称
             }
@@ -184,7 +183,7 @@
                     type: 'warning'
                 }).then(() => {
                     let requestUrl = this.apiUrl + '/delete/' + this.$route.params.tableId +
-                                    '?Id=' + id + '&flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2);
+                        '?Id=' + id + '&flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2);
                     this.axios.get(requestUrl)
                         .then(
                             (res) => {
@@ -196,9 +195,9 @@
                                     // 数据量减一
                                     this.totalSize -= 1;
                                     let index = this.storeData.findIndex(
-                                        (x)=> {
-                                        return x[this.idSetting.name] === id
-                                    });
+                                        (x) => {
+                                            return x[this.idSetting.name] === id
+                                        });
                                     this.storeData.splice(index, 1);
                                 }
                             }
@@ -242,7 +241,7 @@
                 if (this.checkInfoIntegrity()) {     // 检查信息完整性
                     this.saveLoading = true;
                     let requestUrl = this.apiUrl + '/update/' + this.$route.params.tableId +
-                                    '?Id=' + this.detailedData[this.idSetting.name] + '&flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2);
+                        '?Id=' + this.detailedData[this.idSetting.name] + '&flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2);
                     this.axios.post(requestUrl, this.detailedData,
                         {
                             headers: {
@@ -384,6 +383,14 @@
                                 this.listSetting = JSON.parse(pageSettingInfo.show);
                                 // 详细信息配置
                                 this.detailedSetting = JSON.parse(pageSettingInfo.all);
+                                // 可编辑信息配置
+                                Object.keys(this.detailedSetting).forEach(
+                                    (key) => {
+                                        if (this.detailedSetting[key].modify === 'true') {
+                                            this.editableSetting[key]=this.detailedSetting[key];
+                                        }
+                                    });
+
                                 // id设置
                                 this.idSetting = JSON.parse(pageSettingInfo.index);
                             }

@@ -4,11 +4,12 @@
             <!--公共库列表-->
             <el-table
                 :data="tableData"
-                style="width: 30%;"
                 highlight-current-row
                 v-loading="listLoading"
                 element-loading-text="拼命加载中..."
                 border>
+                <el-table-column prop="id" label="ID">
+                </el-table-column>
                 <el-table-column
                     prop="chineseName"
                     label="公共库名称"
