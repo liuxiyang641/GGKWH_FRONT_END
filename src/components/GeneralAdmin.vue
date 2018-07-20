@@ -184,7 +184,7 @@
                     type: 'warning'
                 }).then(() => {
                     let requestUrl = this.apiUrl + '/delete/' + this.$route.params.tableId +
-                                    '?Id=' + this.detailedData[this.idSetting.name] + '&flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2);
+                                    '?Id=' + id + '&flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2);
                     this.axios.get(requestUrl)
                         .then(
                             (res) => {
