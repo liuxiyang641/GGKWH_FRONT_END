@@ -23,7 +23,7 @@
                     </el-col>
                     <el-col :span="12" style="text-align: right">
                         <i class="el-icon-setting" style="margin-right: 1rem;" @click="dialogOfConfig=true"></i>
-                        <el-button type="primary" round>更新</el-button>
+                        <el-button type="primary" round @click="update">更新</el-button>
                     </el-col>
                 </el-row>
             </el-header>
@@ -42,8 +42,11 @@
             <!--编辑已存在专家信息对话框-->
             <el-dialog title="专家信息" :visible.sync="dialogOfInfo">
                 <el-form :model="detailedData">
-                    <el-form-item v-for="(value, key) in detailedSetting" :label="value.name" label-width="120px" :key="key">
-                        <el-input type="textarea" autosize v-model="detailedData[key]" auto-complete="off" :disabled='value.modify==="false" '></el-input>
+                    <el-form-item v-for="(value, key) in detailedSetting" :label='value.name+": " ' label-width="120px" :key="key">
+                        <!--可编辑的显示输入框-->
+                        <el-input v-if='value.modify==="true" ' type="textarea" autosize v-model="detailedData[key]" auto-complete="off"></el-input>
+                        <!--不可编辑的显示文本-->
+                        <span v-else>{{detailedData[key]}}</span>
                     </el-form-item>
                 </el-form>
                 <div slot="footer" class="dialog-footer">
@@ -54,8 +57,11 @@
             <!--添加新的院士信息对话框-->
             <el-dialog title="新增院士信息" :visible.sync="dialogOfAddingNewAca">
                 <el-form :model="detailedData">
-                    <el-form-item v-for="(value, key) in detailedSetting" :label="value.name" label-width="120px" :key="key">
-                        <el-input type="textarea" autosize v-model="detailedData[key]" auto-complete="off" :disabled='value.modify==="false" '></el-input>
+                    <el-form-item v-for="(value, key) in detailedSetting" :label='value.name+": " ' label-width="120px" :key="key">
+                        <!--可编辑的显示输入框-->
+                        <el-input v-if='value.modify==="true" ' type="textarea" autosize v-model="detailedData[key]" auto-complete="off"></el-input>
+                        <!--不可编辑的显示文本-->
+                        <span v-else>{{detailedData[key]}}</span>
                     </el-form-item>
                 </el-form>
                 <div slot="footer" class="dialog-footer">
@@ -76,7 +82,10 @@
                           v-loading="listLoading"
                           element-loading-text="拼命加载中..."
                           :data="storeData">
-                    <el-table-column v-for="(value, key) in listSetting" :label="value" :prop="key" :key="key">
+                    <el-table-column v-for="(value, key) in listSetting" :label="value" :key="key">
+                        <template slot-scope="scope">
+                            <span>{{scope.row[key]}}</span>
+                        </template>
                     </el-table-column>
 
                     <el-table-column label="操作">
@@ -91,7 +100,7 @@
                                 size="medium"
                                 type="danger"
                                 icon="el-icon-delete"
-                                @click.native="del(scope.row.id)"
+                                @click.native="del(scope.row[idSetting.name])"
                             ></el-button>
                         </template>
                     </el-table-column>
@@ -142,10 +151,11 @@
                         return time.getTime() > Date.now();
                     },
                 },
-
-                listSetting:{},
-                detailedSetting:{},
-                pageName:null,
+                // 页面设置
+                listSetting: {},     // 信息列表设置，包含key和对应的中文名
+                detailedSetting: {},   // 详细信息设置，包含key，中文名以及是否可编辑
+                idSetting: {},   // 列表信息id的设置，包括id的key和类型（int与str）
+                pageName: null,   // 页面名称
             }
         },
         computed: {},
@@ -173,7 +183,9 @@
                     cancelButtonText: '取消',
                     type: 'warning'
                 }).then(() => {
-                    this.axios.get(this.apiUrl + '/delete/42?Id=' + id)
+                    let requestUrl = this.apiUrl + '/delete/' + this.$route.params.tableId +
+                                    '?Id=' + this.detailedData[this.idSetting.name] + '&flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2);
+                    this.axios.get(requestUrl)
                         .then(
                             (res) => {
                                 if (res.data === true) {
@@ -183,8 +195,9 @@
                                     });
                                     // 数据量减一
                                     this.totalSize -= 1;
-                                    let index = this.storeData.findIndex(function (x) {
-                                        return x.id === id
+                                    let index = this.storeData.findIndex(
+                                        (x)=> {
+                                        return x[this.idSetting.name] === id
                                     });
                                     this.storeData.splice(index, 1);
                                 }
@@ -218,8 +231,8 @@
             },
             // 检查专家信息完整性
             checkInfoIntegrity: function () {
-                if (!this.detailedData.name || this.detailedData.name === '') {
-                    this.$message.error('专家名字不能为空');
+                if (!this.detailedData) {
+                    this.$message.error('所填信息不能为空');
                     return false;
                 }
                 return true;
@@ -228,7 +241,9 @@
             saveInfo: function () {
                 if (this.checkInfoIntegrity()) {     // 检查信息完整性
                     this.saveLoading = true;
-                    this.axios.post(this.apiUrl + '/update/42?Id=' + this.detailedData.id, this.detailedData,
+                    let requestUrl = this.apiUrl + '/update/' + this.$route.params.tableId +
+                                    '?Id=' + this.detailedData[this.idSetting.name] + '&flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2);
+                    this.axios.post(requestUrl, this.detailedData,
                         {
                             headers: {
                                 'Content-Type': 'application/json',
@@ -245,9 +260,9 @@
                                 // 前端数据更新
                                 let index = this.storeData.findIndex(
                                     (x) => {
-                                        return x.id === this.detailedData.id
+                                        return x[this.idSetting.name] === this.detailedData[this.idSetting.name]
                                     });
-                                this.$set(this.storeData,index,this.detailedData)
+                                this.$set(this.storeData, index, this.detailedData)
                                 // 按钮加载状态消失
                                 this.saveLoading = false;
                                 // 对话框消失
@@ -283,7 +298,9 @@
                 if (this.checkInfoIntegrity()) {     // 检查信息完整性
                     // 显示按钮加载
                     this.addLoading = true;
-                    this.axios.post(this.apiUrl + '/add/42', this.detailedData,
+                    // flag表示id的类型，1为整型，2为str
+                    let requestUrl = this.apiUrl + '/add/' + this.$route.params.tableId + '?flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2);
+                    this.axios.post(requestUrl, this.detailedData,
                         {
                             headers: {
                                 'Content-Type': 'application/json',
@@ -329,29 +346,58 @@
                         });
                 }
             },
+            update: function () {
+                window.location.href = '/updated/results/' + this.$route.params.tableId;
+            },
             // 页面跳转请求
             pageJumping: function () {
                 this.listLoading = true;
-                this.axios.get(this.apiUrl + '/display/'+this.$route.params.tableId+'?page=' + this.pageNum + '&size=' + this.pageSize)
+                this.axios.get(this.apiUrl + '/display/' + this.$route.params.tableId + '?page=' + this.pageNum + '&size=' + this.pageSize)
                     .then(
                         (res) => {
                             if (res.status === 200) {
-                                // 弹出页面配置信息
-                                let pageSettingInfo=res.data.pop();
-                                this.totalSize = pageSettingInfo.totalSize;
-                                this.pageName=pageSettingInfo.pageName;
-                                this.listSetting=JSON.parse(pageSettingInfo.show);
-                                this.detailedSetting=JSON.parse(pageSettingInfo.all);
+                                // 保存的数据
                                 this.storeData = res.data;
+                                // 取消页面加载转态
                                 this.listLoading = false;
+                                window.location.href = '#top';
                             }
                         }
                     ).catch(function (error) {
                     console.log(error);
                 });
-            }
+            },
+            // 获取页面setting
+            getPageSetting: function () {
+                this.listLoading = true;
+                this.axios.get(this.apiUrl + '/getConfig/' + this.$route.params.tableId)
+                    .then(
+                        (res) => {
+                            if (res.status === 200) {
+                                // 获取页面配置信息
+                                let pageSettingInfo = res.data;
+                                // 总页数配置
+                                this.totalSize = pageSettingInfo.totalSize;
+                                // 页面名字
+                                this.pageName = pageSettingInfo.pageName;
+                                // 列表展示信息配置
+                                this.listSetting = JSON.parse(pageSettingInfo.show);
+                                // 详细信息配置
+                                this.detailedSetting = JSON.parse(pageSettingInfo.all);
+                                // id设置
+                                this.idSetting = JSON.parse(pageSettingInfo.index);
+                            }
+                        }
+                    )
+                    .catch(
+                        (error) => {
+                            console.log(error);
+                        }
+                    );
+            },
         },
         created: function () {
+            this.getPageSetting();
             this.pageJumping();
         }
     }
@@ -377,14 +423,17 @@
     .el-aside {
         background-color: #545c64;
     }
-    .el-menu{
+
+    .el-menu {
         text-align: center;
     }
-    a{
+
+    a {
         color: #fff;
         text-decoration: none;
     }
-    a:hover{
+
+    a:hover {
         color: #ffd04b;
     }
 </style>

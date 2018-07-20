@@ -84,6 +84,7 @@
                         if (res.status===200){
                             this.tableData=res.data;
                             this.listLoading=false;
+                            window.location.href='#top';
                         }
                     }
                 ).catch(function (error) {

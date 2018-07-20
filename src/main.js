@@ -9,12 +9,12 @@ import 'element-ui/lib/theme-chalk/index.css'
 
 Vue.config.productionTip = false;
 Vue.use(ElementUI);
-Vue.prototype.axios=axios;
-Vue.prototype.apiUrl='http://2ee0e2b6.ngrok.io'
+Vue.prototype.axios = axios;
+Vue.prototype.apiUrl = 'http://fe176aed.ngrok.io';
 /* eslint-disable no-new */
 new Vue({
-  el: '#app',
-  router,
-  components: { App },
-  template: '<App/>'
-})
+    el: '#app',
+    router,
+    components: {App},
+    template: '<App/>'
+});

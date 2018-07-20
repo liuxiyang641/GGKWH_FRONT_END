@@ -5,12 +5,12 @@ import AdminIndex from '@/components/AdminIndex'
 import AcaOfSciAdmin from '@/components/AcaOfSciAdmin'
 import AcaOfEngAdmin from '@/components/AcaOfEngAdmin'
 import GeneralAdmin from '@/components/GeneralAdmin'
-
+import GeneralUpdatedResults from '@/components/GeneralUpdatedResults'
 
 Vue.use(Router)
 
 export default new Router({
-    mode:'history',
+    mode: 'history',
     routes: [
         {
             path: '/',
@@ -21,21 +21,26 @@ export default new Router({
             path: '/admin',
             name: 'AdminIndex',
             component: AdminIndex,
-            children:[
+            children: [
                 {
-                    path:'acaofsci',
+                    path: 'acaofsci',
                     component: AcaOfSciAdmin
                 },
                 {
-                    path:'acaofeng',
-                    component:AcaOfEngAdmin
+                    path: 'acaofeng',
+                    component: AcaOfEngAdmin
                 },
             ]
         },
         {
-            path:'/admin/:tableId',
-            name:'GeneralAdmin',
-            component:GeneralAdmin
+            path: '/admin/:tableId',
+            name: 'GeneralAdmin',
+            component: GeneralAdmin
+        },
+        {
+            path: '/updated/results/:tableId',
+            name: 'GeneralUpdatedResults',
+            component: GeneralUpdatedResults
         }
 
     ]
