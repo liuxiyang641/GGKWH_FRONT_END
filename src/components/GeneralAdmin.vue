@@ -5,10 +5,10 @@
                      text-color="#fff"
                      active-text-color="#ffd04b">
                 <el-menu-item index="1">
-                    <a href="/admin/acaofsci">中国科学院院士</a>
+                    <a href="/admin/42">中国科学院院士</a>
                 </el-menu-item>
                 <el-menu-item index="2">
-                    <a href="/admin/acaofeng">中国工程院院士</a>
+                    <a href="/admin/43">中国工程院院士</a>
                 </el-menu-item>
                 <el-menu-item index="3">
                     <a href="/admin/18">长江学者</a>
@@ -23,7 +23,7 @@
                     </el-col>
                     <el-col :span="12" style="text-align: right">
                         <i class="el-icon-setting" style="margin-right: 1rem;" @click="dialogOfConfig=true"></i>
-                        <el-button type="primary" round @click="update">更新</el-button>
+                        <el-button type="primary" round @click="showUpdatingDialog">更新</el-button>
                     </el-col>
                 </el-row>
             </el-header>
@@ -31,7 +31,7 @@
             <el-dialog title="配置信息" :visible.sync="dialogOfConfig">
                 <el-form :model="updatingConfig">
                     <el-form-item label="更新来源URL" label-width="120px">
-                        <el-input auto-complete="off" type="textarea" autosize v-model="updatingConfig.url"></el-input>
+                        <el-input clearable auto-complete="off" type="textarea" autosize v-model="updatingConfig.url"></el-input>
                     </el-form-item>
                 </el-form>
                 <div slot="footer" class="dialog-footer">
@@ -39,12 +39,35 @@
                     <el-button type="primary" @click="saveConfig">保 存</el-button>
                 </div>
             </el-dialog>
+            <!--更新数据库对话框-->
+            <el-dialog :title='pageName+" 更新设置"' :visible.sync="dialogOfUpdating">
+                <el-form>
+                    <el-form-item label="更新来源URL" label-width="120px">
+                        <el-input clearable auto-complete="off" type="textarea" autosize v-model="updatingConfig.url"></el-input>
+                    </el-form-item>
+                    <el-form-item label="更新年份" label-width="120px">
+                        <el-date-picker
+                            v-model="updatingConfig.year"
+                            type="year"
+                            :editable="false"
+                            format="yyyy 年"
+                            value-format="yyyy"
+                            placeholder="选择年"
+                            :picker-options="pickerOptions1">
+                        </el-date-picker>
+                    </el-form-item>
+                </el-form>
+                <div slot="footer" class="dialog-footer">
+                    <el-button @click="dialogOfUpdating = false">取 消</el-button>
+                    <el-button type="primary" @click="update">更 新</el-button>
+                </div>
+            </el-dialog>
             <!--编辑已存在专家信息对话框-->
             <el-dialog title="专家信息" :visible.sync="dialogOfInfo">
                 <el-form :model="detailedData">
                     <el-form-item v-for="(value, key) in detailedSetting" :label='value.name+": " ' label-width="120px" :key="key">
                         <!--可编辑的显示输入框-->
-                        <el-input v-if='value.modify==="true" ' type="textarea" autosize v-model="detailedData[key]" auto-complete="off"></el-input>
+                        <el-input clearable v-if='value.modify==="true" ' type="textarea" autosize v-model="detailedData[key]" auto-complete="off"></el-input>
                         <!--不可编辑的显示文本-->
                         <span v-else>{{detailedData[key]}}</span>
                     </el-form-item>
@@ -59,7 +82,7 @@
                 <el-form :model="detailedData">
                     <el-form-item v-for="(value, key) in editableSetting" :label='value.name+": " ' label-width="120px" :key="key">
                         <!--可编辑的显示输入框-->
-                        <el-input v-if='value.modify==="true" ' type="textarea" autosize v-model="detailedData[key]" auto-complete="off"></el-input>
+                        <el-input clearable v-if='value.modify==="true" ' type="textarea" autosize v-model="detailedData[key]" auto-complete="off"></el-input>
                     </el-form-item>
                 </el-form>
                 <div slot="footer" class="dialog-footer">
@@ -80,26 +103,32 @@
                           v-loading="listLoading"
                           element-loading-text="拼命加载中..."
                           :data="storeData">
+                    <!--编号-->
+                    <el-table-column
+                        label="编号"
+                        type="index"
+                        width="50">
+                    </el-table-column>
+                    <!--展示信息-->
                     <el-table-column v-for="(value, key) in listSetting" :label="value" :key="key">
                         <template slot-scope="scope">
-                            <span>{{scope.row[key]}}</span>
+                            <p class="p1">{{scope.row[key]}}</p>
                         </template>
                     </el-table-column>
 
                     <el-table-column label="操作">
                         <template slot-scope="scope">
-                            <!--编辑按钮-->
-                            <el-button
-                                size="medium"
-                                @click="edit(scope.row)">编辑
-                            </el-button>
-                            <!--删除按钮-->
-                            <el-button
-                                size="medium"
-                                type="danger"
-                                icon="el-icon-delete"
-                                @click.native="del(scope.row[idSetting.name])"
-                            ></el-button>
+                            <el-button-group>
+                                <!--编辑按钮-->
+                                <el-button size="medium" @click="edit(scope.row)">编辑</el-button>
+                                <!--删除按钮-->
+                                <el-button
+                                    type="danger"
+                                    icon="el-icon-delete"
+                                    @click.native="del(scope.row[idSetting.name])"
+                                    size="medium"
+                                ></el-button>
+                            </el-button-group>
                         </template>
                     </el-table-column>
                 </el-table>
@@ -129,12 +158,14 @@
                 detailedData: {},
                 // 更新配置
                 updatingConfig: {
-                    url: 'http://www.casad.cas.cn/chnl/371/index.html'
+                    url: 'http://www.casad.cas.cn/chnl/371/index.html',
+                    year: '2017'
                 },
                 // 对话框显示控制
                 dialogOfInfo: false,     // 控制显示详细信息的对话框
                 dialogOfConfig: false,      // 控制显示更新配置的对话框
                 dialogOfAddingNewAca: false,    // 控制新增院士对话框
+                dialogOfUpdating: false,     // 更新数据库对话框
                 // 加载状态控制
                 listLoading: false,     // 列表加载状态
                 addLoading: false,       // 添加新信息按钮加载状态
@@ -159,8 +190,8 @@
         },
         computed: {},
         methods: {
-            // 点击页数触发时间
-            handelCurrentChange(val) {
+            // 点击页数触发事件
+            handelCurrentChange:function(val) {
                 this.pageNum = val;
                 this.pageJumping();
             },
@@ -174,6 +205,10 @@
                 this.dialogOfInfo = true;
                 // 拷贝
                 this.detailedData = Object.assign({}, rowData)
+            },
+            // 弹出更新对话框
+            showUpdatingDialog: function () {
+                this.dialogOfUpdating = true;
             },
             // 删除专家信息
             del: function (id) {
@@ -345,13 +380,17 @@
                         });
                 }
             },
+            // 更新数据库信息
             update: function () {
-                window.location.href = '/updated/results/' + this.$route.params.tableId;
+                window.location.href = '/updated/results/' + this.$route.params.tableId + '/' + this.updatingConfig.year;
+                this.dialogOfUpdating = false;
             },
             // 页面跳转请求
             pageJumping: function () {
                 this.listLoading = true;
-                this.axios.get(this.apiUrl + '/display/' + this.$route.params.tableId + '?page=' + this.pageNum + '&size=' + this.pageSize)
+                let requestUrl = this.apiUrl + '/display/' + this.$route.params.tableId + '?page=' + this.pageNum + '&size=' +
+                    this.pageSize + '&flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2);
+                this.axios.get(requestUrl)
                     .then(
                         (res) => {
                             if (res.status === 200) {
@@ -387,12 +426,13 @@
                                 Object.keys(this.detailedSetting).forEach(
                                     (key) => {
                                         if (this.detailedSetting[key].modify === 'true') {
-                                            this.editableSetting[key]=this.detailedSetting[key];
+                                            this.editableSetting[key] = this.detailedSetting[key];
                                         }
                                     });
 
                                 // id设置
                                 this.idSetting = JSON.parse(pageSettingInfo.index);
+                                this.pageJumping();
                             }
                         }
                     )
@@ -405,7 +445,6 @@
         },
         created: function () {
             this.getPageSetting();
-            this.pageJumping();
         }
     }
 </script>

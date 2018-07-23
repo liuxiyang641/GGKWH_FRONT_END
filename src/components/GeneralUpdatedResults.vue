@@ -5,10 +5,10 @@
                      text-color="#fff"
                      active-text-color="#ffd04b">
                 <el-menu-item index="1">
-                    <a href="/admin/acaofsci">中国科学院院士</a>
+                    <a href="/admin/42">中国科学院院士</a>
                 </el-menu-item>
                 <el-menu-item index="2">
-                    <a href="/admin/acaofeng">中国工程院院士</a>
+                    <a href="/admin/43">中国工程院院士</a>
                 </el-menu-item>
                 <el-menu-item index="3">
                     <a href="/admin/18">长江学者</a>
@@ -19,55 +19,146 @@
             <el-header>
                 <el-row style="font-size: 20px">
                     <el-col :span="12">
-                        <span>更新结果</span>
+                        <span>{{pageName}}更新结果</span>
                     </el-col>
                     <el-col :span="12" style="text-align: right">
                         <el-button type="primary" round>保存更新结果</el-button>
                     </el-col>
                 </el-row>
             </el-header>
+            <!--新增数据详细信息对话框-->
+            <el-dialog title="新增数据更新信息" :visible.sync="dialogOfAddedData">
+                <el-form label-width="5rem" :model="detailedData">
+                    <el-form-item v-for="(value, key) in detailedSetting" :label='value.name+": " '>
+                        <el-input v-if="typeof (detailedData[key])!=='undefined'" auto-complete="off" type="textarea" autosize
+                                  v-model="detailedData[key].newValue"></el-input>
+                    </el-form-item>
+                </el-form>
+                <div slot="footer" class="dialog-footer">
+                    <el-button @click="dialogOfAddedData = false">取 消</el-button>
+                    <el-button type="primary" @click="">保 存</el-button>
+                </div>
+            </el-dialog>
 
+            <el-dialog title="数据更改信息" visible.sync="false">
+                <el-form label-width="5rem" :model="detailedData">
+                    <el-row style="font-size: 20px;text-align: center">
+                        <el-col :span="12" style="border-right: 2px solid #eee">
+                            原数据
+                        </el-col>
+                        <el-col :span="12">
+                            新数据
+                        </el-col>
+                    </el-row>
+                    <el-row style="text-align: left" v-for="(value, key) in detailedSetting">
+                        <el-col :span="12" style="border-right: 2px solid #eee">
+                            <el-form-item :label='value.name+": " '>
+                                <span>{{typeof (detailedData[key])!=='undefined'?detailedData[key].oldValue:''}}</span>
+                            </el-form-item>
+                        </el-col>
+                        <el-col>
+                            <el-form-item :label='value.name+": " '>
+                                <el-input v-if="typeof (detailedData[key])!=='undefined'" auto-complete="off" type="textarea" autosize
+                                          v-model="detailedData[key].newValue"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                </el-form>
+                <div slot="footer" class="dialog-footer">
+                    <el-button @click="">取 消</el-button>
+                    <el-button type="primary" @click="">保 存</el-button>
+                </div>
+            </el-dialog>
 
             <el-main>
-                <!--添加新专家按钮-->
+                <!--添加新数据按钮-->
                 <el-row style="text-align: left; margin-bottom: 10px;">
                     <el-button type="primary" icon="el-icon-plus" circle @click=""></el-button>
                 </el-row>
-                <!--专家列表-->
-                <p>共有 条数据</p>
+                <!--信息列表-->
+                <p>共有{{totalSize}}条数据</p>
                 <el-table border
                           highlight-current-row
                           v-loading="listLoading"
-                          element-loading-text="拼命加载中..."
-                          :data="storeData"
-                            >
-                    <el-table-column label="数据" prop="nm">
+                          element-loading-text="拼命加载更新结果中..."
+                          :data="storeData">
+                    <!--编号-->
+                    <el-table-column
+                        label="编号"
+                        type="index"
+                        width="50">
                     </el-table-column>
+                    <!--展示数据信息列-->
+                    <el-table-column v-for="(value, key) in listSetting" :label="value" :key="key">
+                        <template slot-scope="scope">
+                            <span>{{typeof (scope.row.data[key])!=='undefined'?scope.row.data[key].newValue:''}}</span>
+                        </template>
+                    </el-table-column>
+                    <!--数据状态列-->
                     <el-table-column label="状态"
                                      prop="status"
-                        :filters="[{text:'成功',value:'success'},{text:'失败',value:'fail'}]"
-                        :filter-method="testfilter">
+                                     width="100"
+                                     :filters="[{text:'被移除',value:'deleted'},{text:'新增',value:'new'},{text:'数据更新',value:'updated'},{text:'无更新',value:'kong'}]"
+                                     :filter-method="statusFilter">
                         <template slot-scope="scope">
-                            <el-tag :type='scope.row.status==="success"? "primary" : "success" '>
-                                {{scope.row.status}}
+                            <el-tag v-if='scope.row.status==="deleted"' type='danger'>
+                                被移除
+                            </el-tag>
+                            <el-tag v-else-if='scope.row.status==="updated"'>
+                                数据更新
+                            </el-tag>
+                            <el-tag v-else-if='scope.row.status==="new"' type="success">
+                                新增
+                            </el-tag>
+                            <el-tag v-else-if='scope.row.status==="kong"' type="info">
+                                无更新
                             </el-tag>
                         </template>
                     </el-table-column>
 
                     <el-table-column label="操作">
                         <template slot-scope="scope">
-                            <!--编辑按钮-->
-                            <el-button
-                                size="medium"
-                                @click="">编辑
-                            </el-button>
-                            <!--删除按钮-->
-                            <el-button
-                                size="medium"
-                                type="danger"
-                                icon="el-icon-delete"
-                                @click.native=""
-                            ></el-button>
+                            <!--被删除的数据-->
+                            <el-button-group v-if='scope.row.status==="deleted"'>
+                                <el-button size="medium">查看</el-button>
+                                <el-button size="medium">保留</el-button>
+                                <el-button
+                                    type="danger"
+                                    icon="el-icon-delete"
+                                    @click.native=""
+                                    size="medium"
+                                ></el-button>
+                            </el-button-group>
+                            <!--数据更新状态-->
+                            <el-button-group v-else-if='scope.row.status==="updated"'>
+                                <el-button size="medium" @click="dialogOfAddedInfo=true">编辑</el-button>
+                                <el-button
+                                    type="danger"
+                                    icon="el-icon-delete"
+                                    @click.native=""
+                                    size="medium"
+                                ></el-button>
+                            </el-button-group>
+                            <!--无更新状态-->
+                            <el-button-group v-else-if='scope.row.status==="kong"'>
+                                <el-button size="medium">编辑</el-button>
+                                <el-button
+                                    type="danger"
+                                    icon="el-icon-delete"
+                                    @click.native=""
+                                    size="medium"
+                                ></el-button>
+                            </el-button-group>
+                            <!--新增数据相关操作-->
+                            <el-button-group v-else-if='scope.row.status==="new"'>
+                                <el-button size="medium" @click="showDialogOfAdded(scope.row.data)">编辑</el-button>
+                                <el-button
+                                    type="danger"
+                                    icon="el-icon-delete"
+                                    @click.native=""
+                                    size="medium"
+                                ></el-button>
+                            </el-button-group>
                         </template>
                     </el-table-column>
                 </el-table>
@@ -91,41 +182,98 @@
         data: function () {
             return {
                 // 保存的数据
-                storeData: [
-                    {
-                        nm: '1',
-                        status:'success'
-                    },
-                    {
-                        nm: '2',
-                        status:'fail'
-                    },
-                    {
-                        nm: '1',
-                        status:'success'
-                    },
-                    {
-                        nm: '2',
-                        status:'fail'
-                    }
-                ],
+                storeData: [],
+                detailedData: {},    //详细信息
+                // 对话框
+                dialogOfAddedData: false,      // 数据更新状态信息
                 // 分页控制
                 pageNum: 1,
                 pageSize: 20,
                 totalSize: 0,
                 // 加载状态控制
                 listLoading: false,     // 列表加载状态
+                // 页面设置
+                listSetting: {},     // 信息列表设置，包含key和对应的中文名
+                detailedSetting: {},   // 详细信息设置，包含key，中文名以及是否可编辑
+                editableSetting: {},     // 可编辑的信息设置
+                idSetting: {},   // 列表信息id的设置，包括id的key和类型（int与str）
+                pageName: null,   // 页面名称
             }
         },
+        computed: {},
         methods: {
-            // 点击页数触发时间
-            handelCurrentChange(val) {
-                this.pageNum = val;
+            // 弹出展示新增数据详细信息对话框
+            showDialogOfAdded: function (rowData) {
+                this.dialogOfAddedData = true;
+                this.detailedData = Object.assign({}, rowData);
             },
-            testfilter:function (value, row) {
-                return row.status===value
-            }
-        }
+            // 点击页数触发事件
+            handelCurrentChange: function (val) {
+                this.pageNum = val;
+                this.pageJumping();
+            },
+            // 页面跳转请求
+            pageJumping: function () {
+                this.listLoading = true;
+                this.axios.get(this.apiUrl + '/upgrade/' + this.$route.params.tableId + '?Year=' + this.$route.params.year + '&page=' + this.pageNum + '&size=' + this.pageSize)
+                    .then(
+                        (res) => {
+                            if (res.status === 200) {
+                                // 总页数配置
+                                this.totalSize = res.data.pop().totalCount;
+                                // 保存的数据
+                                this.storeData = res.data;
+                                // 取消页面加载转态
+                                this.listLoading = false;
+                                window.location.href = '#top';
+                            }
+                        }
+                    ).catch(function (error) {
+                    console.log(error);
+                });
+            },
+            // 获取页面setting
+            getPageSetting: function () {
+                this.listLoading = true;
+                this.axios.get(this.apiUrl + '/getConfig/' + this.$route.params.tableId)
+                    .then(
+                        (res) => {
+                            if (res.status === 200) {
+                                // 获取页面配置信息
+                                let pageSettingInfo = res.data;
+                                // 页面名字
+                                this.pageName = pageSettingInfo.pageName;
+                                // 列表展示信息配置
+                                this.listSetting = JSON.parse(pageSettingInfo.show);
+                                // 详细信息配置
+                                this.detailedSetting = JSON.parse(pageSettingInfo.all);
+                                // 可编辑信息配置
+                                Object.keys(this.detailedSetting).forEach(
+                                    (key) => {
+                                        if (this.detailedSetting[key].modify === 'true') {
+                                            this.editableSetting[key] = this.detailedSetting[key];
+                                        }
+                                    });
+
+                                // id设置
+                                this.idSetting = JSON.parse(pageSettingInfo.index);
+                            }
+                        }
+                    )
+                    .catch(
+                        (error) => {
+                            console.log(error);
+                        }
+                    );
+            },
+            statusFilter: function (value, row) {
+                return row.status === value
+            },
+        },
+        created: function () {
+            this.getPageSetting();
+            this.pageJumping();
+        },
     }
 </script>
 

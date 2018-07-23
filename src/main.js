@@ -10,7 +10,7 @@ import 'element-ui/lib/theme-chalk/index.css'
 Vue.config.productionTip = false;
 Vue.use(ElementUI);
 Vue.prototype.axios = axios;
-Vue.prototype.apiUrl = 'http://fe176aed.ngrok.io';
+Vue.prototype.apiUrl = 'http://93c24cd1.ngrok.io';
 /* eslint-disable no-new */
 new Vue({
     el: '#app',
