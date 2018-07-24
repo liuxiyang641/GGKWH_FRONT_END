@@ -1,20 +1,6 @@
 <template>
     <el-container style="border: 1px solid #eee">
-        <el-aside width="200px">
-            <el-menu background-color="#545c64"
-                     text-color="#fff"
-                     active-text-color="#ffd04b">
-                <el-menu-item index="1">
-                    <a href="/admin/42">中国科学院院士</a>
-                </el-menu-item>
-                <el-menu-item index="2">
-                    <a href="/admin/43">中国工程院院士</a>
-                </el-menu-item>
-                <el-menu-item index="3">
-                    <a href="/admin/18">长江学者</a>
-                </el-menu-item>
-            </el-menu>
-        </el-aside>
+        <AsideMenu></AsideMenu>
         <el-container>
             <el-header>
                 <el-row style="font-size: 20px">
@@ -148,6 +134,7 @@
 </template>
 
 <script>
+    import AsideMenu from '@/components/AsideMenu'
     export default {
         name: "generalAdmin",
         data: function () {
@@ -187,6 +174,9 @@
                 idSetting: {},   // 列表信息id的设置，包括id的key和类型（int与str）
                 pageName: null,   // 页面名称
             }
+        },
+        components:{
+          AsideMenu,
         },
         computed: {},
         methods: {

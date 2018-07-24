@@ -1,20 +1,6 @@
 <template>
     <el-container style="border: 1px solid #eee">
-        <el-aside width="200px">
-            <el-menu background-color="#545c64"
-                     text-color="#fff"
-                     active-text-color="#ffd04b">
-                <el-menu-item index="1">
-                    <a href="/admin/42">中国科学院院士</a>
-                </el-menu-item>
-                <el-menu-item index="2">
-                    <a href="/admin/43">中国工程院院士</a>
-                </el-menu-item>
-                <el-menu-item index="3">
-                    <a href="/admin/18">长江学者</a>
-                </el-menu-item>
-            </el-menu>
-        </el-aside>
+        <AsideMenu></AsideMenu>
         <el-container>
             <el-header>
                 <el-row style="font-size: 20px">
@@ -28,10 +14,11 @@
             </el-header>
             <!--新增数据详细信息对话框-->
             <el-dialog title="新增数据更新信息" :visible.sync="dialogOfAddedData">
-                <el-form label-width="5rem" :model="detailedData">
-                    <el-form-item v-for="(value, key) in detailedSetting" :label='value.name+": " '>
-                        <el-input v-if="typeof (detailedData[key])!=='undefined'" auto-complete="off" type="textarea" autosize
-                                  v-model="detailedData[key].newValue"></el-input>
+                <!--保证this.detailedDatab不是一个空对象，否则在初始化绑定时会报错-->
+                <el-form label-width="5rem" :model="detailedData" v-if='JSON.stringify(this.detailedData)!=="{}" '>
+                    <el-form-item  v-for="(value, key) in detailedSetting" :label='value.name+": " ' :key="key">
+                        <el-input v-if='value.modify==="true" ' auto-complete="off" type="textarea" autosize v-model="detailedData[key].newValue"></el-input>
+                        <span v-else>{{detailedData[key].newValue}}</span>
                     </el-form-item>
                 </el-form>
                 <div slot="footer" class="dialog-footer">
@@ -50,7 +37,7 @@
                             新数据
                         </el-col>
                     </el-row>
-                    <el-row style="text-align: left" v-for="(value, key) in detailedSetting">
+                    <el-row style="text-align: left" v-for="(value, key) in detailedSetting" :key="key">
                         <el-col :span="12" style="border-right: 2px solid #eee">
                             <el-form-item :label='value.name+": " '>
                                 <span>{{typeof (detailedData[key])!=='undefined'?detailedData[key].oldValue:''}}</span>
@@ -91,7 +78,7 @@
                     <!--展示数据信息列-->
                     <el-table-column v-for="(value, key) in listSetting" :label="value" :key="key">
                         <template slot-scope="scope">
-                            <span>{{typeof (scope.row.data[key])!=='undefined'?scope.row.data[key].newValue:''}}</span>
+                            <p class="p1">{{typeof (scope.row.data[key])!=='undefined'?scope.row.data[key].newValue:key}}</p>
                         </template>
                     </el-table-column>
                     <!--数据状态列-->
@@ -177,6 +164,7 @@
 </template>
 
 <script>
+    import AsideMenu from '@/components/AsideMenu'
     export default {
         name: "GeneralUpdatedResults",
         data: function () {
@@ -200,12 +188,18 @@
                 pageName: null,   // 页面名称
             }
         },
+        components:{
+            AsideMenu,
+        },
         computed: {},
         methods: {
             // 弹出展示新增数据详细信息对话框
             showDialogOfAdded: function (rowData) {
+                this.detailedData = {};
+                for (let key in rowData){
+                    this.detailedData[key]= Object.assign({}, rowData[key])
+                }
                 this.dialogOfAddedData = true;
-                this.detailedData = Object.assign({}, rowData);
             },
             // 点击页数触发事件
             handelCurrentChange: function (val) {
@@ -245,8 +239,22 @@
                                 this.pageName = pageSettingInfo.pageName;
                                 // 列表展示信息配置
                                 this.listSetting = JSON.parse(pageSettingInfo.show);
+                                // 删除修改时间字段
+                                for (var key in this.listSetting){
+                                    if (key==='MODIFY_TIME'){
+                                        delete this.listSetting[key];
+                                        break
+                                    }
+                                }
                                 // 详细信息配置
                                 this.detailedSetting = JSON.parse(pageSettingInfo.all);
+                                // 删除修改时间字段
+                                for (var key in this.detailedSetting){
+                                    if (key==='MODIFY_TIME'){
+                                        delete this.detailedSetting[key];
+                                        break
+                                    }
+                                }
                                 // 可编辑信息配置
                                 Object.keys(this.detailedSetting).forEach(
                                     (key) => {
@@ -257,6 +265,7 @@
 
                                 // id设置
                                 this.idSetting = JSON.parse(pageSettingInfo.index);
+                                this.pageJumping();
                             }
                         }
                     )
@@ -272,7 +281,6 @@
         },
         created: function () {
             this.getPageSetting();
-            this.pageJumping();
         },
     }
 </script>
