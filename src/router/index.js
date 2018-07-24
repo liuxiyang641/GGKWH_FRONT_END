@@ -39,7 +39,7 @@ export default new Router({
             component: GeneralAdmin
         },
         {
-            path: '/updated/results/:tableId/:year',
+            path: '/updated/results/:tableId',
             name: 'GeneralUpdatedResults',
             component: GeneralUpdatedResults
         }

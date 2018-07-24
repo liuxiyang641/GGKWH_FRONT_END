@@ -10,42 +10,38 @@
                     <el-col :span="12" style="text-align: right">
                         <i class="el-icon-setting" style="margin-right: 1rem;" @click="dialogOfConfig=true"></i>
                         <el-button type="primary" round @click="showUpdatingDialog">更新</el-button>
+                        <el-button type="primary" round
+                                   @click="viewLatestData">
+                            查看更新结果
+                        </el-button>
                     </el-col>
                 </el-row>
             </el-header>
             <!--配置信息对话框-->
             <el-dialog title="配置信息" :visible.sync="dialogOfConfig">
                 <el-form :model="updatingConfig">
-                    <el-form-item label="更新来源URL" label-width="120px">
-                        <el-input clearable auto-complete="off" type="textarea" autosize v-model="updatingConfig.url"></el-input>
+                    <el-form-item v-for="(value, key) in updatingConfig" :label='value.name+": " ' label-width="100px" :key="key">
+                        <el-input clearable auto-complete="off" type="textarea" autosize v-model="value.value"></el-input>
                     </el-form-item>
                 </el-form>
                 <div slot="footer" class="dialog-footer">
                     <el-button @click="dialogOfConfig = false">取 消</el-button>
-                    <el-button type="primary" @click="saveConfig">保 存</el-button>
+                    <el-button v-loading="saveUpdatingConfigLoading" type="primary" @click="saveConfig">保存配置</el-button>
                 </div>
             </el-dialog>
-            <!--更新数据库对话框-->
-            <el-dialog :title='pageName+" 更新设置"' :visible.sync="dialogOfUpdating">
-                <el-form>
-                    <el-form-item label="更新来源URL" label-width="120px">
-                        <el-input clearable auto-complete="off" type="textarea" autosize v-model="updatingConfig.url"></el-input>
-                    </el-form-item>
-                    <el-form-item label="更新年份" label-width="120px">
-                        <el-date-picker
-                            v-model="updatingConfig.year"
-                            type="year"
-                            :editable="false"
-                            format="yyyy 年"
-                            value-format="yyyy"
-                            placeholder="选择年"
-                            :picker-options="pickerOptions1">
-                        </el-date-picker>
+            <!--获取最新数据对话框-->
+            <el-dialog :title='"获取"+pageName+"最新数据"'
+                       :visible.sync="dialogOfGetLatestData"
+                       v-loading="getLatestDataLoading"
+                       element-loading-text="获取最新数据中，请稍候...">
+                <el-form :model="updatingConfig">
+                    <el-form-item v-for="(value, key) in updatingConfig" :label='value.name+": " ' label-width="100px" :key="key">
+                        <span v-model="value.value"></span>
                     </el-form-item>
                 </el-form>
                 <div slot="footer" class="dialog-footer">
-                    <el-button @click="dialogOfUpdating = false">取 消</el-button>
-                    <el-button type="primary" @click="update">更 新</el-button>
+                    <el-button @click="dialogOfGetLatestData = false">取 消</el-button>
+                    <el-button type="primary" @click="getLatestData">获取最新数据</el-button>
                 </div>
             </el-dialog>
             <!--编辑已存在专家信息对话框-->
@@ -135,6 +131,7 @@
 
 <script>
     import AsideMenu from '@/components/AsideMenu'
+
     export default {
         name: "generalAdmin",
         data: function () {
@@ -143,20 +140,17 @@
                 storeData: [],
                 // 院士详细信息
                 detailedData: {},
-                // 更新配置
-                updatingConfig: {
-                    url: 'http://www.casad.cas.cn/chnl/371/index.html',
-                    year: '2017'
-                },
                 // 对话框显示控制
                 dialogOfInfo: false,     // 控制显示详细信息的对话框
                 dialogOfConfig: false,      // 控制显示更新配置的对话框
                 dialogOfAddingNewAca: false,    // 控制新增院士对话框
-                dialogOfUpdating: false,     // 更新数据库对话框
+                dialogOfGetLatestData: false,     // 更新数据库对话框
                 // 加载状态控制
                 listLoading: false,     // 列表加载状态
                 addLoading: false,       // 添加新信息按钮加载状态
                 saveLoading: false,      // 保存更新的信息加载按钮
+                getLatestDataLoading: false,     // 获取最新数据加载状态
+                saveUpdatingConfigLoading:false,    // 保存更新配置设置
                 // 分页控制
                 pageNum: 1,
                 pageSize: 20,
@@ -173,15 +167,16 @@
                 editableSetting: {},     // 可编辑的信息设置
                 idSetting: {},   // 列表信息id的设置，包括id的key和类型（int与str）
                 pageName: null,   // 页面名称
+                updatingConfig: {},  // 更新配置
             }
         },
-        components:{
-          AsideMenu,
+        components: {
+            AsideMenu,
         },
         computed: {},
         methods: {
             // 点击页数触发事件
-            handelCurrentChange:function(val) {
+            handelCurrentChange: function (val) {
                 this.pageNum = val;
                 this.pageJumping();
             },
@@ -198,7 +193,7 @@
             },
             // 弹出更新对话框
             showUpdatingDialog: function () {
-                this.dialogOfUpdating = true;
+                this.dialogOfGetLatestData = true;
             },
             // 删除专家信息
             del: function (id) {
@@ -245,13 +240,50 @@
             },
             // 保存更新配置
             saveConfig: function () {
-                this.dialogOfConfig = false;
-                this.$notify({
-                    title: '成功',
-                    message: '成功保存配置信息',
-                    type: 'success',
-                    duration: 4000
-                });
+                this.saveUpdatingConfigLoading=true;    // 保存更新配置按钮加载
+                let requestUrl = this.apiUrl + '/setConfig/' + this.$route.params.tableId;
+                let configData = {};      // 构造传递参数
+                for (let key in this.updatingConfig) {
+                    configData[key] = this.updatingConfig[key].value;
+                }
+                this.axios.post(requestUrl, configData,)
+                    .then(
+                        (res) => {
+                            if (res.data === true) {   // 添加成功
+                                this.$notify({
+                                    title: '成功',
+                                    message: '成功保存配置信息',
+                                    type: 'success',
+                                    duration: 4000
+                                });
+                                // 按钮加载状态消失
+                                this.saveUpdatingConfigLoading = false;
+                                // 对话框消失
+                                this.dialogOfConfig = false;
+                            }
+                            else {  //添加失败
+                                this.$notify({
+                                    title: '失败',
+                                    message: '保存信息失败',
+                                    type: 'error',
+                                    duration: 4000
+                                });
+                                // 按钮加载状态消失
+                                this.saveUpdatingConfigLoading = false;
+                            }
+                        }
+                    ).catch(
+                    (error) => {
+                        console.log(error);
+                        this.$notify({
+                            title: '失败',
+                            message: '网络异常',
+                            type: 'warning',
+                            duration: 4000
+                        });
+                        // 按钮加载状态消失
+                        this.saveUpdatingConfigLoading = false;
+                    });
             },
             // 检查专家信息完整性
             checkInfoIntegrity: function () {
@@ -370,10 +402,48 @@
                         });
                 }
             },
-            // 更新数据库信息
-            update: function () {
-                window.location.href = '/updated/results/' + this.$route.params.tableId + '/' + this.updatingConfig.year;
-                this.dialogOfUpdating = false;
+            // 获取最新数据
+            getLatestData: function () {
+                this.getLatestDataLoading = true;
+                this.axios.get(this.apiUrl + '/generateUpgrade/' + this.$route.params.tableId + '?year=' + this.updatingConfig.year)
+                    .then(
+                        (res) => {
+                            if (res.data === true) {
+                                this.$notify({
+                                    title: '成功',
+                                    message: '成功获取最新数据，请查看更新结果',
+                                    type: 'success',
+                                    duration: 4000
+                                });
+                                this.getLatestDataLoading = false;
+                                this.dialogOfGetLatestData = false;
+                            }
+                            else {
+                                this.$notify({
+                                    title: '失败',
+                                    message: '获取最新数据失败',
+                                    type: 'error',
+                                    duration: 4000
+                                });
+                                this.getLatestDataLoading = false;
+                            }
+                        }
+                    )
+                    .catch(
+                        (error) => {
+                            console.log(error);
+                            this.$notify({
+                                title: '失败',
+                                message: '网络异常',
+                                type: 'warning',
+                                duration: 4000
+                            });
+                            this.getLatestDataLoading = false;
+                        }
+                    );
+            },
+            viewLatestData: function () {
+                window.location.href = '/updated/results/' + this.$route.params.tableId;
             },
             // 页面跳转请求
             pageJumping: function () {
@@ -422,6 +492,8 @@
 
                                 // id设置
                                 this.idSetting = JSON.parse(pageSettingInfo.index);
+                                // 更新设置
+                                this.updatingConfig = JSON.parse(pageSettingInfo.upgrade);
                                 this.pageJumping();
                             }
                         }

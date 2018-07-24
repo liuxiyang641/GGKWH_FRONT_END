@@ -58,10 +58,6 @@
             </el-dialog>
 
             <el-main>
-                <!--添加新数据按钮-->
-                <el-row style="text-align: left; margin-bottom: 10px;">
-                    <el-button type="primary" icon="el-icon-plus" circle @click=""></el-button>
-                </el-row>
                 <!--信息列表-->
                 <p>共有{{totalSize}}条数据</p>
                 <el-table border
@@ -186,6 +182,7 @@
                 editableSetting: {},     // 可编辑的信息设置
                 idSetting: {},   // 列表信息id的设置，包括id的key和类型（int与str）
                 pageName: null,   // 页面名称
+
             }
         },
         components:{
@@ -209,7 +206,7 @@
             // 页面跳转请求
             pageJumping: function () {
                 this.listLoading = true;
-                this.axios.get(this.apiUrl + '/upgrade/' + this.$route.params.tableId + '?Year=' + this.$route.params.year + '&page=' + this.pageNum + '&size=' + this.pageSize)
+                this.axios.get(this.apiUrl + '/upgrade/' + this.$route.params.tableId + '?page=' + this.pageNum + '&size=' + this.pageSize)
                     .then(
                         (res) => {
                             if (res.status === 200) {
@@ -246,8 +243,11 @@
                                         break
                                     }
                                 }
+                                console.log(this.listSetting);
                                 // 详细信息配置
                                 this.detailedSetting = JSON.parse(pageSettingInfo.all);
+                                console.log(this.detailedSetting);
+
                                 // 删除修改时间字段
                                 for (var key in this.detailedSetting){
                                     if (key==='MODIFY_TIME'){
@@ -262,7 +262,6 @@
                                             this.editableSetting[key] = this.detailedSetting[key];
                                         }
                                     });
-
                                 // id设置
                                 this.idSetting = JSON.parse(pageSettingInfo.index);
                                 this.pageJumping();
