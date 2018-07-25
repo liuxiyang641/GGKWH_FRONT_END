@@ -16,7 +16,7 @@
             <el-dialog title="新增数据更新信息" :visible.sync="dialogOfAddedData">
                 <!--保证this.detailedDatab不是一个空对象，否则在初始化绑定时会报错-->
                 <el-form label-width="5rem" :model="detailedData" v-if='JSON.stringify(this.detailedData)!=="{}" '>
-                    <el-form-item  v-for="(value, key) in detailedSetting" :label='value.name+": " ' :key="key">
+                    <el-form-item v-for="(value, key) in detailedSetting" :label='value.name+": " ' :key="key">
                         <el-input v-if='value.modify==="true" ' auto-complete="off" type="textarea" autosize v-model="detailedData[key].newValue"></el-input>
                         <span v-else>{{detailedData[key].newValue}}</span>
                     </el-form-item>
@@ -161,6 +161,7 @@
 
 <script>
     import AsideMenu from '@/components/AsideMenu'
+
     export default {
         name: "GeneralUpdatedResults",
         data: function () {
@@ -185,7 +186,7 @@
 
             }
         },
-        components:{
+        components: {
             AsideMenu,
         },
         computed: {},
@@ -193,8 +194,8 @@
             // 弹出展示新增数据详细信息对话框
             showDialogOfAdded: function (rowData) {
                 this.detailedData = {};
-                for (let key in rowData){
-                    this.detailedData[key]= Object.assign({}, rowData[key])
+                for (let key in rowData) {
+                    this.detailedData[key] = Object.assign({}, rowData[key])
                 }
                 this.dialogOfAddedData = true;
             },
@@ -218,10 +219,17 @@
                                 this.listLoading = false;
                                 window.location.href = '#top';
                             }
+                            else {
+                                this.$message.error('网络异常，请重新加载');
+                                this.listLoading = false;
+                            }
                         }
-                    ).catch(function (error) {
-                    console.log(error);
-                });
+                    ).catch(
+                    (error) => {
+                        console.log(error);
+                        this.$message.error('网络异常，请重新加载');
+                        this.listLoading = false;
+                    });
             },
             // 获取页面setting
             getPageSetting: function () {
@@ -237,8 +245,8 @@
                                 // 列表展示信息配置
                                 this.listSetting = JSON.parse(pageSettingInfo.show);
                                 // 删除修改时间字段
-                                for (var key in this.listSetting){
-                                    if (key==='MODIFY_TIME'){
+                                for (var key in this.listSetting) {
+                                    if (key === 'MODIFY_TIME') {
                                         delete this.listSetting[key];
                                         break
                                     }
@@ -249,8 +257,8 @@
                                 console.log(this.detailedSetting);
 
                                 // 删除修改时间字段
-                                for (var key in this.detailedSetting){
-                                    if (key==='MODIFY_TIME'){
+                                for (var key in this.detailedSetting) {
+                                    if (key === 'MODIFY_TIME') {
                                         delete this.detailedSetting[key];
                                         break
                                     }

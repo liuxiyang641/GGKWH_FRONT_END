@@ -94,7 +94,9 @@
                     <!--展示信息-->
                     <el-table-column v-for="(value, key) in listSetting" :label="value" :key="key">
                         <template slot-scope="scope">
-                            <p class="p1">{{scope.row[key]}}</p>
+                            <p class="p1">
+                                <span>{{scope.row[key]}}</span>
+                            </p>
                         </template>
                     </el-table-column>
 
@@ -150,7 +152,7 @@
                 addLoading: false,       // 添加新信息按钮加载状态
                 saveLoading: false,      // 保存更新的信息加载按钮
                 getLatestDataLoading: false,     // 获取最新数据加载状态
-                saveUpdatingConfigLoading:false,    // 保存更新配置设置
+                saveUpdatingConfigLoading: false,    // 保存更新配置设置
                 // 分页控制
                 pageNum: 1,
                 pageSize: 20,
@@ -220,6 +222,9 @@
                                         });
                                     this.storeData.splice(index, 1);
                                 }
+                                else {
+                                    this.$message.error('网络异常，请重新加载');
+                                }
                             }
                         ).catch(
                         (error) => {
@@ -240,7 +245,7 @@
             },
             // 保存更新配置
             saveConfig: function () {
-                this.saveUpdatingConfigLoading=true;    // 保存更新配置按钮加载
+                this.saveUpdatingConfigLoading = true;    // 保存更新配置按钮加载
                 let requestUrl = this.apiUrl + '/setConfig/' + this.$route.params.tableId;
                 let configData = {};      // 构造传递参数
                 for (let key in this.updatingConfig) {
@@ -287,7 +292,7 @@
             },
             // 检查专家信息完整性
             checkInfoIntegrity: function () {
-                if (!this.detailedData) {
+                if (JSON.stringify(this.detailedData) === '{}') {
                     this.$message.error('所填信息不能为空');
                     return false;
                 }
@@ -460,6 +465,10 @@
                                 this.listLoading = false;
                                 window.location.href = '#top';
                             }
+                            else {
+                                this.$message.error('网络异常，请重新加载');
+                                this.listLoading = false;
+                            }
                         }
                     ).catch(function (error) {
                     console.log(error);
@@ -495,6 +504,10 @@
                                 // 更新设置
                                 this.updatingConfig = JSON.parse(pageSettingInfo.upgrade);
                                 this.pageJumping();
+                            }
+                            else {
+                                this.$message.error('网络异常，请重新加载');
+                                this.listLoading = false;
                             }
                         }
                     )
@@ -544,4 +557,16 @@
     a:hover {
         color: #ffd04b;
     }
+
+    .bottom {
+        clear: both;
+        text-align: center;
+
+    }
+
+    .item {
+        margin: 4px;
+        width: 100px;
+    }
+
 </style>
