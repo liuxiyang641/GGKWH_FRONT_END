@@ -56,7 +56,14 @@
                     <el-button type="primary" @click="">保 存</el-button>
                 </div>
             </el-dialog>
-
+            <!--提示无更新结果-->
+            <el-alert
+                v-if="existUpdatedResults"
+                title="错误!"
+                type="error"
+                description="暂无更新结果，请返回上一页面先获取最新数据"
+                show-icon>
+            </el-alert>
             <el-main>
                 <!--信息列表-->
                 <p>共有{{totalSize}}条数据</p>
@@ -65,11 +72,12 @@
                           v-loading="listLoading"
                           element-loading-text="拼命加载更新结果中..."
                           :data="storeData">
-                    <!--编号-->
+                    <!--序号-->
                     <el-table-column
-                        label="编号"
+                        label="序号"
+                        width="70"
                         type="index"
-                        width="50">
+                        :index="computeIndex">
                     </el-table-column>
                     <!--展示数据信息列-->
                     <el-table-column v-for="(value, key) in listSetting" :label="value" :key="key">
@@ -183,6 +191,7 @@
                 editableSetting: {},     // 可编辑的信息设置
                 idSetting: {},   // 列表信息id的设置，包括id的key和类型（int与str）
                 pageName: null,   // 页面名称
+                existUpdatedResults: false,  // 是否存在更新结果
 
             }
         },
@@ -191,6 +200,10 @@
         },
         computed: {},
         methods: {
+            // 计算序号
+            computeIndex:function(index){
+                return (this.pageNum-1)*this.pageSize+(index+1);
+            },
             // 弹出展示新增数据详细信息对话框
             showDialogOfAdded: function (rowData) {
                 this.detailedData = {};
@@ -211,13 +224,19 @@
                     .then(
                         (res) => {
                             if (res.status === 200) {
-                                // 总页数配置
-                                this.totalSize = res.data.pop().totalCount;
-                                // 保存的数据
-                                this.storeData = res.data;
-                                // 取消页面加载转态
-                                this.listLoading = false;
-                                window.location.href = '#top';
+                                if (res.data !== "") {        // 返回值不为空，存在更新结果
+                                    // 总页数配置
+                                    this.totalSize = res.data.pop().totalCount;
+                                    // 保存的数据
+                                    this.storeData = res.data;
+                                    // 取消页面加载转态
+                                    this.listLoading = false;
+                                    window.location.href = '#top';
+                                }
+                                else {
+                                    this.listLoading = false;
+                                    this.existUpdatedResults = true;
+                                }
                             }
                             else {
                                 this.$message.error('网络异常，请重新加载');
@@ -251,11 +270,8 @@
                                         break
                                     }
                                 }
-                                console.log(this.listSetting);
                                 // 详细信息配置
                                 this.detailedSetting = JSON.parse(pageSettingInfo.all);
-                                console.log(this.detailedSetting);
-
                                 // 删除修改时间字段
                                 for (var key in this.detailedSetting) {
                                     if (key === 'MODIFY_TIME') {

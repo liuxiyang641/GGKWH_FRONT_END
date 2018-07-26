@@ -36,7 +36,7 @@
                        element-loading-text="获取最新数据中，请稍候...">
                 <el-form :model="updatingConfig">
                     <el-form-item v-for="(value, key) in updatingConfig" :label='value.name+": " ' label-width="100px" :key="key">
-                        <span v-model="value.value"></span>
+                        <span>{{value.value}}</span>
                     </el-form-item>
                 </el-form>
                 <div slot="footer" class="dialog-footer">
@@ -85,11 +85,12 @@
                           v-loading="listLoading"
                           element-loading-text="拼命加载中..."
                           :data="storeData">
-                    <!--编号-->
+                    <!--序号-->
                     <el-table-column
-                        label="编号"
+                        label="序号"
+                        width="70"
                         type="index"
-                        width="50">
+                        :index="computeIndex">
                     </el-table-column>
                     <!--展示信息-->
                     <el-table-column v-for="(value, key) in listSetting" :label="value" :key="key">
@@ -177,6 +178,10 @@
         },
         computed: {},
         methods: {
+            // 计算序号
+            computeIndex:function(index){
+                return (this.pageNum-1)*this.pageSize+(index+1);
+            },
             // 点击页数触发事件
             handelCurrentChange: function (val) {
                 this.pageNum = val;
@@ -247,11 +252,16 @@
             saveConfig: function () {
                 this.saveUpdatingConfigLoading = true;    // 保存更新配置按钮加载
                 let requestUrl = this.apiUrl + '/setConfig/' + this.$route.params.tableId;
-                let configData = {};      // 构造传递参数
+                let configData = new FormData();      // 构造传递参数
                 for (let key in this.updatingConfig) {
-                    configData[key] = this.updatingConfig[key].value;
+                    configData.append(key, this.updatingConfig[key].value)
                 }
-                this.axios.post(requestUrl, configData,)
+                this.axios.post(requestUrl, configData,
+                    {
+                        headers: {
+                            'Content-Type': 'multipart/form-data',
+                        }
+                    })
                     .then(
                         (res) => {
                             if (res.data === true) {   // 添加成功
@@ -410,7 +420,7 @@
             // 获取最新数据
             getLatestData: function () {
                 this.getLatestDataLoading = true;
-                this.axios.get(this.apiUrl + '/generateUpgrade/' + this.$route.params.tableId + '?year=' + this.updatingConfig.year)
+                this.axios.get(this.apiUrl + '/generateUpgrade/' + this.$route.params.tableId + '?year=' + this.updatingConfig.year.value)
                     .then(
                         (res) => {
                             if (res.data === true) {
