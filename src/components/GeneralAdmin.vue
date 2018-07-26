@@ -333,7 +333,7 @@
                                     (x) => {
                                         return x[this.idSetting.name] === this.detailedData[this.idSetting.name]
                                     });
-                                this.$set(this.storeData, index, this.detailedData)
+                                this.$set(this.storeData, index, this.detailedData);
                                 // 按钮加载状态消失
                                 this.saveLoading = false;
                                 // 对话框消失

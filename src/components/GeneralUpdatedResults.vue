@@ -12,8 +12,8 @@
                     </el-col>
                 </el-row>
             </el-header>
-            <!--新增数据详细信息对话框-->
-            <el-dialog title="新增数据更新信息" :visible.sync="dialogOfAddedData">
+            <!--new数据详细信息对话框-->
+            <el-dialog title="新增数据更新信息" :visible.sync="dialogOfNewData">
                 <!--保证this.detailedDatab不是一个空对象，否则在初始化绑定时会报错-->
                 <el-form label-width="5rem" :model="detailedData" v-if='JSON.stringify(this.detailedData)!=="{}" '>
                     <el-form-item v-for="(value, key) in detailedSetting" :label='value.name+": " ' :key="key">
@@ -22,8 +22,21 @@
                     </el-form-item>
                 </el-form>
                 <div slot="footer" class="dialog-footer">
-                    <el-button @click="dialogOfAddedData = false">取 消</el-button>
-                    <el-button type="primary" @click="">保 存</el-button>
+                    <el-button @click="dialogOfNewData = false">取 消</el-button>
+                    <el-button type="primary" @click="submitModification" v-loading="submitModificationLoading">提 交</el-button>
+                </div>
+            </el-dialog>
+
+            <!--saved数据详细信息对话框-->
+            <el-dialog title="数据更新信息" :visible.sync="dialogOfSavedData">
+                <!--保证this.detailedDatab不是一个空对象，否则在初始化绑定时会报错-->
+                <el-form label-width="5rem" :model="detailedData" v-if='JSON.stringify(this.detailedData)!=="{}" '>
+                    <el-form-item v-for="(value, key) in detailedSetting" :label='value.name+": " ' :key="key">
+                        <span>{{detailedData[key].newValue}}</span>
+                    </el-form-item>
+                </el-form>
+                <div slot="footer" class="dialog-footer">
+                    <el-button type="primary" @click="dialogOfSavedData = false">关 闭</el-button>
                 </div>
             </el-dialog>
 
@@ -75,9 +88,10 @@
                     <!--序号-->
                     <el-table-column
                         label="序号"
-                        width="70"
-                        type="index"
-                        :index="computeIndex">
+                        width="70">
+                        <template slot-scope="scope">
+                            <span>{{scope.row.index}}</span>
+                        </template>
                     </el-table-column>
                     <!--展示数据信息列-->
                     <el-table-column v-for="(value, key) in listSetting" :label="value" :key="key">
@@ -89,20 +103,20 @@
                     <el-table-column label="状态"
                                      prop="status"
                                      width="100"
-                                     :filters="[{text:'被移除',value:'deleted'},{text:'新增',value:'new'},{text:'数据更新',value:'updated'},{text:'无更新',value:'kong'}]"
+                                     :filters="[{text:'被移除',value:'deleted'},{text:'新增',value:'new'},{text:'数据更新',value:'update'},{text:'已保存',value:'saved'}]"
                                      :filter-method="statusFilter">
                         <template slot-scope="scope">
                             <el-tag v-if='scope.row.status==="deleted"' type='danger'>
                                 被移除
                             </el-tag>
-                            <el-tag v-else-if='scope.row.status==="updated"'>
-                                数据更新
-                            </el-tag>
                             <el-tag v-else-if='scope.row.status==="new"' type="success">
                                 新增
                             </el-tag>
-                            <el-tag v-else-if='scope.row.status==="kong"' type="info">
-                                无更新
+                            <el-tag v-else-if='scope.row.status==="saved"' type="info">
+                                已保存
+                            </el-tag>
+                            <el-tag v-else-if='scope.row.status==="update"'>
+                                数据更新
                             </el-tag>
                         </template>
                     </el-table-column>
@@ -111,43 +125,39 @@
                         <template slot-scope="scope">
                             <!--被删除的数据-->
                             <el-button-group v-if='scope.row.status==="deleted"'>
-                                <el-button size="medium">查看</el-button>
-                                <el-button size="medium">保留</el-button>
+                                <el-button >查看</el-button>
+                                <el-button >保留</el-button>
                                 <el-button
                                     type="danger"
                                     icon="el-icon-delete"
+                                    size="small"
                                     @click.native=""
-                                    size="medium"
                                 ></el-button>
                             </el-button-group>
                             <!--数据更新状态-->
-                            <el-button-group v-else-if='scope.row.status==="updated"'>
-                                <el-button size="medium" @click="dialogOfAddedInfo=true">编辑</el-button>
+                            <el-button-group v-else-if='scope.row.status==="update"'>
+                                <el-button  size="small" @click="dialogOfAddedInfo=true">编辑</el-button>
+                                <el-button  @click="saveSingleData(scope.row.index)" size="small">保存</el-button>
                                 <el-button
                                     type="danger"
                                     icon="el-icon-delete"
+                                    size="small"
                                     @click.native=""
-                                    size="medium"
                                 ></el-button>
                             </el-button-group>
-                            <!--无更新状态-->
-                            <el-button-group v-else-if='scope.row.status==="kong"'>
-                                <el-button size="medium">编辑</el-button>
-                                <el-button
-                                    type="danger"
-                                    icon="el-icon-delete"
-                                    @click.native=""
-                                    size="medium"
-                                ></el-button>
+                            <!--已保存数据状态-->
+                            <el-button-group v-else-if='scope.row.status==="saved"'>
+                                <el-button size="small" @click="showDialogOfSavedData(scope.row.data)">查看</el-button>
                             </el-button-group>
                             <!--新增数据相关操作-->
-                            <el-button-group v-else-if='scope.row.status==="new"'>
-                                <el-button size="medium" @click="showDialogOfAdded(scope.row.data)">编辑</el-button>
+                            <el-button-group v-else-if='scope.row.status==="new"' >
+                                <el-button  @click="showDialogOfNewData(scope.row.data,scope.row.index)" size="small">编辑</el-button>
+                                <el-button  @click="saveSingleData(scope.row.index)" size="small">保存</el-button>
                                 <el-button
                                     type="danger"
                                     icon="el-icon-delete"
-                                    @click.native=""
-                                    size="medium"
+                                    size="small"
+                                    @click.native="del(scope.row.index)"
                                 ></el-button>
                             </el-button-group>
                         </template>
@@ -177,14 +187,17 @@
                 // 保存的数据
                 storeData: [],
                 detailedData: {},    //详细信息
+                modifyingRowIndex: null, //正在编辑的行序号
                 // 对话框
-                dialogOfAddedData: false,      // 数据更新状态信息
+                dialogOfNewData: false,      // 数据更新状态信息
+                dialogOfSavedData:false,  // 已保存数据库的状态信息
                 // 分页控制
                 pageNum: 1,
                 pageSize: 20,
                 totalSize: 0,
                 // 加载状态控制
                 listLoading: false,     // 列表加载状态
+                submitModificationLoading: false,    // 提交修改按钮加载状态
                 // 页面设置
                 listSetting: {},     // 信息列表设置，包含key和对应的中文名
                 detailedSetting: {},   // 详细信息设置，包含key，中文名以及是否可编辑
@@ -200,17 +213,147 @@
         },
         computed: {},
         methods: {
-            // 计算序号
-            computeIndex:function(index){
-                return (this.pageNum-1)*this.pageSize+(index+1);
-            },
             // 弹出展示新增数据详细信息对话框
-            showDialogOfAdded: function (rowData) {
-                this.detailedData = {};
-                for (let key in rowData) {
-                    this.detailedData[key] = Object.assign({}, rowData[key])
+            showDialogOfNewData: function (rowData, rowIndex) {
+                this.detailedData = JSON.parse(JSON.stringify(rowData));
+                this.modifyingRowIndex = rowIndex;
+                this.dialogOfNewData = true;
+            },
+            // 弹出saved数据详细信息对话框
+            showDialogOfSavedData:function(rowData){
+                this.detailedData = JSON.parse(JSON.stringify(rowData));
+                this.dialogOfSavedData=true;
+            },
+            // 提交修改后的更新信息
+            submitModification: function () {
+                this.submitModificationLoading = true;
+                // 保存修改的数据的序号
+                let tempIndex = this.modifyingRowIndex - 1;
+                let tempData = {};
+                for (let key in this.detailedData) {
+                    tempData[key] = this.detailedData[key].newValue;
                 }
-                this.dialogOfAddedData = true;
+                this.axios.post(this.apiUrl + '/upgrade/modify/' + this.$route.params.tableId + '?index=' + tempIndex, tempData)
+                    .then(
+                        (res) => {
+                            if (res.status === 200) {
+                                if (res.data === true) {
+                                    this.$notify({
+                                        title: '成功',
+                                        message: '修改信息成功',
+                                        type: 'success',
+                                        duration: 4000
+                                    });
+                                    // 修改前端数据
+                                    this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].data = this.detailedData;
+                                    this.submitModificationLoading = false;
+                                    this.dialogOfNewData = false;
+                                }
+                                else {      // 修改更新信息失败
+                                    this.$notify({
+                                        title: '失败',
+                                        message: '修改信息失败',
+                                        type: 'error',
+                                        duration: 4000
+                                    });
+                                    this.submitModificationLoading = false;
+                                }
+                            }
+                            else {
+                                this.$message.error('网络异常，请重新尝试');
+                                this.submitModificationLoading = false;
+                            }
+                        }
+                    ).catch(
+                    (error) => {
+                        console.log(error);
+                        this.$message.error('网络异常，请重新尝试');
+                        this.submitModificationLoading = false;
+                    });
+            },
+            // 保存单条更新信息
+            saveSingleData: function (rowIndex) {
+                this.$confirm('确认保存该条信息吗？, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'info'
+                }).then(() => {
+                    let tempIndex = rowIndex - 1;
+                    let requestUrl = this.apiUrl + '/upgradeSave/' +this.$route.params.tableId+
+                        '?index=' + tempIndex + '&flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2);
+                    this.axios.get(requestUrl)
+                        .then(
+                            (res) => {
+                                if (res.data === true) {
+                                    this.$message({
+                                        type: 'success',
+                                        message: '保存成功!'
+                                    });
+                                    // 更改为保存状态
+                                    this.$set(this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize],'status','saved');
+                                }
+                                else {
+                                    this.$message.error('网络异常，请重新尝试');
+                                }
+                            }
+                        ).catch(
+                        (error) => {
+                            console.log(error);
+                            this.$notify({
+                                title: '失败',
+                                message: '网络异常',
+                                type: 'warning',
+                                duration: 4000
+                            });
+                        });
+                }).catch(() => {
+                    this.$message({
+                        type: 'info',
+                        message: '已取消删除'
+                    });
+                });
+            },
+            // 删除更新信息
+            del: function (rowIndex) {
+                this.$confirm('此操作将删除该条更新信息, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    let tempIndex = rowIndex - 1;
+                    let requestUrl = this.apiUrl + '/upgrade/delete/' + this.$route.params.tableId + '?index=' + tempIndex;
+                    this.axios.get(requestUrl)
+                        .then(
+                            (res) => {
+                                if (res.data === true) {
+                                    this.$message({
+                                        type: 'success',
+                                        message: '删除成功!'
+                                    });
+                                    // 数据量减一
+                                    this.totalSize -= 1;
+                                    this.storeData.splice(tempIndex - (this.pageNum - 1) * this.pageSize, 1);
+                                }
+                                else {
+                                    this.$message.error('网络异常，请重新加载');
+                                }
+                            }
+                        ).catch(
+                        (error) => {
+                            console.log(error);
+                            this.$notify({
+                                title: '失败',
+                                message: '网络异常',
+                                type: 'warning',
+                                duration: 4000
+                            });
+                        });
+                }).catch(() => {
+                    this.$message({
+                        type: 'info',
+                        message: '已取消删除'
+                    });
+                });
             },
             // 点击页数触发事件
             handelCurrentChange: function (val) {
@@ -229,6 +372,10 @@
                                     this.totalSize = res.data.pop().totalCount;
                                     // 保存的数据
                                     this.storeData = res.data;
+                                    // 为每一条数据添加序号，从1开始
+                                    for (let i = 0; i < this.storeData.length; ++i) {
+                                        this.storeData[i]['index'] = (this.pageNum - 1) * this.pageSize + (i + 1);
+                                    }
                                     // 取消页面加载转态
                                     this.listLoading = false;
                                     window.location.href = '#top';
