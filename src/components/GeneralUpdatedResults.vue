@@ -79,7 +79,7 @@
             </el-alert>
             <el-main>
                 <el-row style="text-align: left; margin-bottom: 5px;">
-                    <el-col :span="10">
+                    <el-col :span="8">
                         <p>共有{{totalNum}}条数据 新增{{NumOfNewData}}条 已保存{{NumOfSavedData}}条 {{NumOfUpdateData}}条数据更新状态</p>
                     </el-col>
                     <el-col :span="10">
@@ -90,6 +90,8 @@
                             </el-select>
                             <el-button slot="append" @click="search" icon="el-icon-search" style="background-color: #409EFF;color: white">搜索</el-button>
                         </el-input>
+                    </el-col>
+                    <el-col :span="6" style="padding-left: 10px">
                         <el-checkbox :indeterminate="isIndeterminate" v-model="checkAll" @change="handleCheckAllChange">全选</el-checkbox>
                         <el-checkbox-group v-model="checkedStatuses" @change="handleCheckedSingleChange">
                             <el-checkbox v-for="status in statuses" :label="status.status" :key="status.status">{{status.label}}</el-checkbox>
