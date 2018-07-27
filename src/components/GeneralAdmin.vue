@@ -74,12 +74,25 @@
             </el-dialog>
 
             <el-main>
-                <!--添加新专家按钮-->
-                <el-row style="text-align: left; margin-bottom: 10px;">
-                    <el-button type="primary" icon="el-icon-plus" circle @click="add()"></el-button>
+                <el-row style="text-align: left; margin-bottom: 5px;">
+                    <el-col :span="6">
+                        <span :span="12">共有 {{totalSize}} 条数据</span>
+                    </el-col>
+                    <el-col :span="10">
+                        <!--搜索框-->
+                        <el-input placeholder="请输入内容" v-model="searchContent">
+                            <el-select slot="prepend" placeholder="请选择" v-model="searchKey" >
+                                <el-option v-for="(value, key) in detailedSetting" :label='value.name' :value="key" :key="key"></el-option>
+                            </el-select>
+                            <el-button slot="append" @click="search" icon="el-icon-search" style="background-color: #409EFF;color: white">搜索</el-button>
+                        </el-input>
+                    </el-col>
+                    <el-col :span="8" style="text-align: right;margin-bottom: 3px">
+                        <!--添加新专家按钮-->
+                        <el-button :span="12" type="primary" icon="el-icon-plus" circle @click="add()"></el-button>
+                    </el-col>
                 </el-row>
                 <!--专家列表-->
-                <p>共有 {{totalSize}} 条数据</p>
                 <el-table border
                           highlight-current-row
                           v-loading="listLoading"
@@ -158,12 +171,6 @@
                 pageNum: 1,
                 pageSize: 20,
                 totalSize: 0,
-                // 日期选择器控制
-                pickerOptions1: {
-                    disabledDate(time) {
-                        return time.getTime() > Date.now();
-                    },
-                },
                 // 页面设置
                 listSetting: {},     // 信息列表设置，包含key和对应的中文名
                 detailedSetting: {},   // 详细信息设置，包含key，中文名以及是否可编辑
@@ -171,6 +178,9 @@
                 idSetting: {},   // 列表信息id的设置，包括id的key和类型（int与str）
                 pageName: null,   // 页面名称
                 updatingConfig: {},  // 更新配置
+                // 检索设置
+                searchKey: null,  // 检索的key
+                searchContent:''    // 检索的内容
             }
         },
         components: {
@@ -179,8 +189,8 @@
         computed: {},
         methods: {
             // 计算序号
-            computeIndex:function(index){
-                return (this.pageNum-1)*this.pageSize+(index+1);
+            computeIndex: function (index) {
+                return (this.pageNum - 1) * this.pageSize + (index + 1);
             },
             // 点击页数触发事件
             handelCurrentChange: function (val) {
@@ -457,8 +467,45 @@
                         }
                     );
             },
+            // 查看更新结果
             viewLatestData: function () {
                 window.location.href = '/updated/results/' + this.$route.params.tableId;
+            },
+            // 检索
+            search:function(){
+                this.listLoading=true;
+                let searchData={};
+                searchData[this.searchKey]=this.searchContent;
+                this.axios.post(this.apiUrl + '/freeSearch/' + this.$route.params.tableId + '?page=' + this.pageNum + '&size=' + this.pageSize,searchData,
+                    {
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    })
+                    .then(
+                        (res) => {
+                            if (res.status === 200) {
+                                // 搜索结果条数
+                                this.totalSize=res.data.pop().totalSize;
+                                // 保存的数据
+                                this.storeData = res.data;
+                                // 取消页面加载转态
+                                this.listLoading = false;
+                                window.location.href = '#top';
+                            }
+                            else {
+                                this.$message.error('网络异常，请重新尝试检索');
+                                this.listLoading = false;
+                            }
+                        }
+                    )
+                    .catch(
+                        (error) => {
+                            console.log(error);
+                            this.$message.error('网络异常，请重新尝试检索');
+                            this.listLoading=false;
+                        }
+                    );
             },
             // 页面跳转请求
             pageJumping: function () {
@@ -480,9 +527,12 @@
                                 this.listLoading = false;
                             }
                         }
-                    ).catch(function (error) {
-                    console.log(error);
-                });
+                    ).catch(
+                    (error) => {
+                        console.log(error);
+                        this.$message.error('网络异常，请重新加载');
+                        this.listLoading = false;
+                    });
             },
             // 获取页面setting
             getPageSetting: function () {
@@ -524,6 +574,8 @@
                     .catch(
                         (error) => {
                             console.log(error);
+                            this.$message.error('网络异常，请重新加载');
+                            this.listLoading = false;
                         }
                     );
             },
@@ -579,4 +631,7 @@
         width: 100px;
     }
 
+    .el-select {
+        width: 130px;
+    }
 </style>

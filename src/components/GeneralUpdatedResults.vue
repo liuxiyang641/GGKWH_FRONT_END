@@ -45,7 +45,7 @@
                     <el-row>
                         <el-col :span="12">
                             <el-row style="font-size: 20px;text-align: center">原数据</el-row>
-                            <el-form-item v-for="(value, key) in detailedSetting" :key="key" :label='value.name+": " '  >
+                            <el-form-item v-for="(value, key) in detailedSetting" :key="key" :label='value.name+": " '>
                                 <span>{{detailedData[key].oldValue}}</span>
                             </el-form-item>
                         </el-col>
@@ -78,8 +78,26 @@
                 show-icon>
             </el-alert>
             <el-main>
+                <el-row style="text-align: left; margin-bottom: 5px;">
+                    <el-col :span="10">
+                        <p>共有{{totalNum}}条数据 新增{{NumOfNewData}}条 已保存{{NumOfSavedData}}条 {{NumOfUpdateData}}条数据更新状态</p>
+                    </el-col>
+                    <el-col :span="10">
+                        <!--搜索框-->
+                        <el-input placeholder="请输入内容" v-model="searchContent">
+                            <el-select slot="prepend" placeholder="请选择" v-model="searchKey">
+                                <el-option v-for="(value, key) in detailedSetting" :label='value.name' :value="key" :key="key"></el-option>
+                            </el-select>
+                            <el-button slot="append" @click="search" icon="el-icon-search" style="background-color: #409EFF;color: white">搜索</el-button>
+                        </el-input>
+                        <el-checkbox :indeterminate="isIndeterminate" v-model="checkAll" @change="handleCheckAllChange">全选</el-checkbox>
+                        <el-checkbox-group v-model="checkedStatuses" @change="handleCheckedSingleChange">
+                            <el-checkbox v-for="status in statuses" :label="status.status" :key="status.status">{{status.label}}</el-checkbox>
+                        </el-checkbox-group>
+                    </el-col>
+                </el-row>
+
                 <!--信息列表-->
-                <p>共有{{totalNum}}条数据 {{NumOfNewData}}条新增数据 {{NumOfSavedData}}条已保存数据 {{NumOfUpdateData}}条数据更新状态</p>
                 <el-table border
                           highlight-current-row
                           v-loading="listLoading"
@@ -196,9 +214,9 @@
                 pageNum: 1,
                 pageSize: 20,
                 totalNum: 0,   // 总条数
-                NumOfNewData:0,     // 新增数据条数
-                NumOfUpdateData:0,  // 数据更新状态数据条数
-                NumOfSavedData:0, // 已保存的数据条数
+                NumOfNewData: 0,     // 新增数据条数
+                NumOfUpdateData: 0,  // 数据更新状态数据条数
+                NumOfSavedData: 0, // 已保存的数据条数
                 // 加载状态控制
                 listLoading: false,     // 列表加载状态
                 submitModificationLoading: false,    // 提交修改按钮加载状态
@@ -209,7 +227,17 @@
                 idSetting: {},   // 列表信息id的设置，包括id的key和类型（int与str）
                 pageName: null,   // 页面名称
                 existUpdatedResults: false,  // 是否存在更新结果
-
+                // 检索设置
+                searchKey: null,  // 检索的key
+                searchContent: '',   // 检索的内容
+                checkAll: true,    // 是否全选
+                checkedStatuses: ['update', 'saved', 'new'],  // 所有选择的状态
+                statuses: [
+                    {'status': 'update', 'label': '数据更新'},
+                    {'status': 'new', 'label': '新增'},
+                    {'status': 'saved', 'label': '已保存'},
+                ],
+                isIndeterminate: false  // 全选的不确定状态
             }
         },
         components: {
@@ -217,6 +245,16 @@
         },
         computed: {},
         methods: {
+            handleCheckAllChange(val) {
+                this.checkedStatuses = val ? ['update', 'saved', 'new'] : [];
+                this.isIndeterminate = false;
+            },
+            handleCheckedSingleChange(value) {
+                let checkedCount = value.length;
+                this.checkAll = checkedCount === this.statuses.length;
+                // 既没有全不选也没有全选，处于不确定状态
+                this.isIndeterminate = checkedCount > 0 && checkedCount < this.statuses.length;
+            },
             // 弹出展示新增数据详细信息对话框
             showDialogOfNewData: function (rowData, rowIndex) {
                 this.detailedData = JSON.parse(JSON.stringify(rowData));
@@ -229,7 +267,7 @@
                 this.dialogOfSavedData = true;
             },
             // 他们出update数据详细信息对话框
-            showDialogOfUpdateData: function (rowData,rowIndex) {
+            showDialogOfUpdateData: function (rowData, rowIndex) {
                 this.detailedData = JSON.parse(JSON.stringify(rowData));
                 this.modifyingRowIndex = rowIndex;
                 this.dialogOfUpdateData = true;
@@ -302,14 +340,14 @@
                                         message: '保存成功!'
                                     });
                                     // 设置数据条数
-                                    if (this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].status==='update')
-                                        this.NumOfUpdateData-=1;
-                                    else if(this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].status==='new')
-                                        this.NumOfNewData-=1;
+                                    if (this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].status === 'update')
+                                        this.NumOfUpdateData -= 1;
+                                    else if (this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].status === 'new')
+                                        this.NumOfNewData -= 1;
                                     // 更改为保存状态
                                     this.$set(this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize], 'status', 'saved');
                                     // 保存数据条数+1
-                                    this.NumOfSavedData+=1;
+                                    this.NumOfSavedData += 1;
                                 }
                                 else {
                                     this.$notify({
@@ -357,9 +395,9 @@
                                     for (let index = 0, len = this.storeData.length; index < len; ++index) {
                                         this.$set(this.storeData[index], 'status', 'saved');
                                     }
-                                    this.NumOfNewData=0;
-                                    this.NumOfUpdateData=0;
-                                    this.NumOfSavedData=this.totalNum;
+                                    this.NumOfNewData = 0;
+                                    this.NumOfUpdateData = 0;
+                                    this.NumOfSavedData = this.totalNum;
                                 }
                                 else {
                                     this.$message.error('网络异常，请重新尝试');
@@ -401,10 +439,10 @@
                                     });
                                     // 数据量减一
                                     this.totalNum -= 1;
-                                    if (this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].status==='update')
-                                        this.NumOfUpdateData-=1;
-                                    else if(this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].status==='new')
-                                        this.NumOfNewData-=1;
+                                    if (this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].status === 'update')
+                                        this.NumOfUpdateData -= 1;
+                                    else if (this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].status === 'new')
+                                        this.NumOfNewData -= 1;
                                     this.storeData.splice(tempIndex - (this.pageNum - 1) * this.pageSize, 1);
                                 }
                                 else {
@@ -428,6 +466,82 @@
                     });
                 });
             },
+            // 检索
+            search: function () {
+                if (this.searchKey === '') {
+                    this.$message.warning('请选择检索字段');
+                    return;
+                }
+                if (this.searchContent === '') {
+                    this.$message.warning('请输入检索内容');
+                    return;
+                }
+                // 一种状态都没有选
+                if (this.checkedStatuses.length === 0) {
+                    this.$message.warning('请选择一种更新状态');
+                    return;
+                }
+                this.listLoading = true;
+                let searchData = {        // 构造传递参数
+                    'condition': {},
+                    'status': {
+                        'update': true,
+                        'new': true,
+                        'saved': true
+                    }
+                };
+                searchData.condition[this.searchKey] = this.searchContent;   // 传入要检索的字段信息
+                // 没有全选状态
+                if (this.checkAll === false) {
+                    if (this.checkedStatuses.indexOf('saved') === -1) {
+                        searchData.status.saved = false;
+                    }
+                    if (this.checkedStatuses.indexOf('update') === -1) {
+                        searchData.status.update = false;
+                    }
+                    if (this.checkedStatuses.indexOf('new') === -1) {
+                        searchData.status.new = false;
+                    }
+                }
+                this.axios.post(this.apiUrl + '/searchUpgrade/' + this.$route.params.tableId + '?page=' + this.pageNum + '&size=' + this.pageSize, searchData,
+                    {
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    })
+                    .then(
+                        (res) => {
+                            if (res.status === 200) {
+                                // 总页数配置
+                                let numbers = res.data.pop();
+                                this.totalNum = numbers.totalCount;
+                                this.NumOfNewData = numbers.newCount;
+                                this.NumOfSavedData = numbers.savedCount;
+                                this.NumOfUpdateData = numbers.updateCount;
+                                // 保存的数据
+                                this.storeData = res.data;
+                                // 为每一条数据添加序号，从1开始
+                                for (let i = 0; i < this.storeData.length; ++i) {
+                                    this.storeData[i]['index'] = (this.pageNum - 1) * this.pageSize + (i + 1);
+                                }
+                                // 取消页面加载转态
+                                this.listLoading = false;
+                                window.location.href = '#top';
+                            }
+                            else {
+                                this.$message.error('网络异常，请重新尝试检索');
+                                this.listLoading = false;
+                            }
+                        }
+                    )
+                    .catch(
+                        (error) => {
+                            console.log(error);
+                            this.$message.error('网络异常，请重新尝试检索');
+                            this.listLoading = false;
+                        }
+                    );
+            },
             // 点击页数触发事件
             handelCurrentChange: function (val) {
                 this.pageNum = val;
@@ -442,11 +556,11 @@
                             if (res.status === 200) {
                                 if (res.data !== "") {        // 返回值不为空，存在更新结果
                                     // 总页数配置
-                                    let numbers=res.data.pop();
+                                    let numbers = res.data.pop();
                                     this.totalNum = numbers.totalCount;
-                                    this.NumOfNewData=numbers.newCount;
-                                    this.NumOfSavedData=numbers.savedCount;
-                                    this.NumOfUpdateData=numbers.updateCount;
+                                    this.NumOfNewData = numbers.newCount;
+                                    this.NumOfSavedData = numbers.savedCount;
+                                    this.NumOfUpdateData = numbers.updateCount;
                                     // 保存的数据
                                     this.storeData = res.data;
                                     // 为每一条数据添加序号，从1开始
@@ -570,5 +684,9 @@
 
     a:hover {
         color: #ffd04b;
+    }
+
+    .el-select {
+        width: 130px;
     }
 </style>
