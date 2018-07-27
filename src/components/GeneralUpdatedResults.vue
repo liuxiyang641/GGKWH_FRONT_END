@@ -8,7 +8,7 @@
                         <span>{{pageName}}更新结果</span>
                     </el-col>
                     <el-col :span="12" style="text-align: right">
-                        <el-button type="primary" round>保存更新结果</el-button>
+                        <el-button type="primary" round @click="saveAllData">保存更新结果</el-button>
                     </el-col>
                 </el-row>
             </el-header>
@@ -39,34 +39,34 @@
                     <el-button type="primary" @click="dialogOfSavedData = false">关 闭</el-button>
                 </div>
             </el-dialog>
-
-            <el-dialog title="数据更改信息" visible.sync="false">
-                <el-form label-width="5rem" :model="detailedData">
-                    <el-row style="font-size: 20px;text-align: center">
-                        <el-col :span="12" style="border-right: 2px solid #eee">
-                            原数据
-                        </el-col>
+            <!--update数据详细信息对话框-->
+            <el-dialog title="数据更新信息" :visible.sync="dialogOfUpdateData">
+                <el-form label-width="5rem" :model="detailedData" v-if='JSON.stringify(this.detailedData)!=="{}" '>
+                    <el-row>
                         <el-col :span="12">
-                            新数据
-                        </el-col>
-                    </el-row>
-                    <el-row style="text-align: left" v-for="(value, key) in detailedSetting" :key="key">
-                        <el-col :span="12" style="border-right: 2px solid #eee">
-                            <el-form-item :label='value.name+": " '>
-                                <span>{{typeof (detailedData[key])!=='undefined'?detailedData[key].oldValue:''}}</span>
+                            <el-row style="font-size: 20px;text-align: center">原数据</el-row>
+                            <el-form-item v-for="(value, key) in detailedSetting" :key="key" :label='value.name+": " '  >
+                                <span>{{detailedData[key].oldValue}}</span>
                             </el-form-item>
                         </el-col>
-                        <el-col>
-                            <el-form-item :label='value.name+": " '>
-                                <el-input v-if="typeof (detailedData[key])!=='undefined'" auto-complete="off" type="textarea" autosize
-                                          v-model="detailedData[key].newValue"></el-input>
+                        <el-col :span="12" style="border-left: 2px solid #eee">
+                            <el-row style="font-size: 20px;text-align: center">新数据</el-row>
+                            <el-form-item v-for="(value, key) in detailedSetting" :key="key">
+                                <el-tag slot="label" type="success" v-if='detailedData[key].status==="update" '>
+                                    {{value.name+": "}}
+                                </el-tag>
+                                <label slot="label" v-else>
+                                    {{value.name+": "}}
+                                </label>
+                                <el-input v-if='value.modify==="true" ' auto-complete="off" type="textarea" autosize v-model="detailedData[key].newValue"></el-input>
+                                <span v-else>{{detailedData[key].newValue}}</span>
                             </el-form-item>
                         </el-col>
                     </el-row>
                 </el-form>
                 <div slot="footer" class="dialog-footer">
-                    <el-button @click="">取 消</el-button>
-                    <el-button type="primary" @click="">保 存</el-button>
+                    <el-button @click="dialogOfUpdateData=false">取 消</el-button>
+                    <el-button type="primary" @click="submitModification" v-loading="submitModificationLoading">提 交</el-button>
                 </div>
             </el-dialog>
             <!--提示无更新结果-->
@@ -79,7 +79,7 @@
             </el-alert>
             <el-main>
                 <!--信息列表-->
-                <p>共有{{totalSize}}条数据</p>
+                <p>共有{{totalNum}}条数据 {{NumOfNewData}}条新增数据 {{NumOfSavedData}}条已保存数据 {{NumOfUpdateData}}条数据更新状态</p>
                 <el-table border
                           highlight-current-row
                           v-loading="listLoading"
@@ -125,8 +125,8 @@
                         <template slot-scope="scope">
                             <!--被删除的数据-->
                             <el-button-group v-if='scope.row.status==="deleted"'>
-                                <el-button >查看</el-button>
-                                <el-button >保留</el-button>
+                                <el-button>查看</el-button>
+                                <el-button>保留</el-button>
                                 <el-button
                                     type="danger"
                                     icon="el-icon-delete"
@@ -136,8 +136,8 @@
                             </el-button-group>
                             <!--数据更新状态-->
                             <el-button-group v-else-if='scope.row.status==="update"'>
-                                <el-button  size="small" @click="dialogOfAddedInfo=true">编辑</el-button>
-                                <el-button  @click="saveSingleData(scope.row.index)" size="small">保存</el-button>
+                                <el-button size="small" @click="showDialogOfUpdateData(scope.row.data,scope.row.index)">编辑</el-button>
+                                <el-button @click="saveSingleData(scope.row.index)" size="small">保存</el-button>
                                 <el-button
                                     type="danger"
                                     icon="el-icon-delete"
@@ -150,9 +150,9 @@
                                 <el-button size="small" @click="showDialogOfSavedData(scope.row.data)">查看</el-button>
                             </el-button-group>
                             <!--新增数据相关操作-->
-                            <el-button-group v-else-if='scope.row.status==="new"' >
-                                <el-button  @click="showDialogOfNewData(scope.row.data,scope.row.index)" size="small">编辑</el-button>
-                                <el-button  @click="saveSingleData(scope.row.index)" size="small">保存</el-button>
+                            <el-button-group v-else-if='scope.row.status==="new"'>
+                                <el-button @click="showDialogOfNewData(scope.row.data,scope.row.index)" size="small">编辑</el-button>
+                                <el-button @click="saveSingleData(scope.row.index)" size="small">保存</el-button>
                                 <el-button
                                     type="danger"
                                     icon="el-icon-delete"
@@ -167,7 +167,7 @@
                 <el-pagination
                     background
                     layout="prev, pager, next"
-                    :total="totalSize"
+                    :total="totalNum"
                     :current-page="pageNum"
                     :page-size="pageSize"
                     @current-change="handelCurrentChange">
@@ -190,11 +190,15 @@
                 modifyingRowIndex: null, //正在编辑的行序号
                 // 对话框
                 dialogOfNewData: false,      // 数据更新状态信息
-                dialogOfSavedData:false,  // 已保存数据库的状态信息
+                dialogOfSavedData: false,  // 已保存数据库的状态信息
+                dialogOfUpdateData: false,   // 数据更新状态信息
                 // 分页控制
                 pageNum: 1,
                 pageSize: 20,
-                totalSize: 0,
+                totalNum: 0,   // 总条数
+                NumOfNewData:0,     // 新增数据条数
+                NumOfUpdateData:0,  // 数据更新状态数据条数
+                NumOfSavedData:0, // 已保存的数据条数
                 // 加载状态控制
                 listLoading: false,     // 列表加载状态
                 submitModificationLoading: false,    // 提交修改按钮加载状态
@@ -220,9 +224,15 @@
                 this.dialogOfNewData = true;
             },
             // 弹出saved数据详细信息对话框
-            showDialogOfSavedData:function(rowData){
+            showDialogOfSavedData: function (rowData) {
                 this.detailedData = JSON.parse(JSON.stringify(rowData));
-                this.dialogOfSavedData=true;
+                this.dialogOfSavedData = true;
+            },
+            // 他们出update数据详细信息对话框
+            showDialogOfUpdateData: function (rowData,rowIndex) {
+                this.detailedData = JSON.parse(JSON.stringify(rowData));
+                this.modifyingRowIndex = rowIndex;
+                this.dialogOfUpdateData = true;
             },
             // 提交修改后的更新信息
             submitModification: function () {
@@ -247,7 +257,9 @@
                                     // 修改前端数据
                                     this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].data = this.detailedData;
                                     this.submitModificationLoading = false;
+                                    // 两种对话框都保存
                                     this.dialogOfNewData = false;
+                                    this.dialogOfUpdateData = false;
                                 }
                                 else {      // 修改更新信息失败
                                     this.$notify({
@@ -279,7 +291,7 @@
                     type: 'info'
                 }).then(() => {
                     let tempIndex = rowIndex - 1;
-                    let requestUrl = this.apiUrl + '/upgradeSave/' +this.$route.params.tableId+
+                    let requestUrl = this.apiUrl + '/upgradeSave/' + this.$route.params.tableId +
                         '?index=' + tempIndex + '&flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2);
                     this.axios.get(requestUrl)
                         .then(
@@ -289,8 +301,65 @@
                                         type: 'success',
                                         message: '保存成功!'
                                     });
+                                    // 设置数据条数
+                                    if (this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].status==='update')
+                                        this.NumOfUpdateData-=1;
+                                    else if(this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].status==='new')
+                                        this.NumOfNewData-=1;
                                     // 更改为保存状态
-                                    this.$set(this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize],'status','saved');
+                                    this.$set(this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize], 'status', 'saved');
+                                    // 保存数据条数+1
+                                    this.NumOfSavedData+=1;
+                                }
+                                else {
+                                    this.$notify({
+                                        title: '失败',
+                                        message: '保存失败，请重新尝试',
+                                        type: 'warning',
+                                        duration: 4000
+                                    });
+                                }
+                            }
+                        ).catch(
+                        (error) => {
+                            console.log(error);
+                            this.$notify({
+                                title: '失败',
+                                message: '网络异常',
+                                type: 'warning',
+                                duration: 4000
+                            });
+                        });
+                }).catch(() => {
+                    this.$message({
+                        type: 'info',
+                        message: '已取消删除'
+                    });
+                });
+            },
+            // 保存当前所有的更新信息
+            saveAllData: function () {
+                this.$confirm('确认将所有更新结果保存入库吗？该操作无法撤销, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'info'
+                }).then(() => {
+                    let requestUrl = this.apiUrl + '/upgrade/saveAll/' + this.$route.params.tableId + '?flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2);
+                    this.axios.get(requestUrl)
+                        .then(
+                            (res) => {
+                                if (res.data === true) {
+                                    this.$message({
+                                        type: 'success',
+                                        message: '所有数据已经成功保存!'
+                                    });
+                                    // 更改为保存状态
+                                    for (let index = 0, len = this.storeData.length; index < len; ++index) {
+                                        this.$set(this.storeData[index], 'status', 'saved');
+                                    }
+                                    this.NumOfNewData=0;
+                                    this.NumOfUpdateData=0;
+                                    this.NumOfSavedData=this.totalNum;
                                 }
                                 else {
                                     this.$message.error('网络异常，请重新尝试');
@@ -331,7 +400,11 @@
                                         message: '删除成功!'
                                     });
                                     // 数据量减一
-                                    this.totalSize -= 1;
+                                    this.totalNum -= 1;
+                                    if (this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].status==='update')
+                                        this.NumOfUpdateData-=1;
+                                    else if(this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].status==='new')
+                                        this.NumOfNewData-=1;
                                     this.storeData.splice(tempIndex - (this.pageNum - 1) * this.pageSize, 1);
                                 }
                                 else {
@@ -369,7 +442,11 @@
                             if (res.status === 200) {
                                 if (res.data !== "") {        // 返回值不为空，存在更新结果
                                     // 总页数配置
-                                    this.totalSize = res.data.pop().totalCount;
+                                    let numbers=res.data.pop();
+                                    this.totalNum = numbers.totalCount;
+                                    this.NumOfNewData=numbers.newCount;
+                                    this.NumOfSavedData=numbers.savedCount;
+                                    this.NumOfUpdateData=numbers.updateCount;
                                     // 保存的数据
                                     this.storeData = res.data;
                                     // 为每一条数据添加序号，从1开始
@@ -411,7 +488,7 @@
                                 // 列表展示信息配置
                                 this.listSetting = JSON.parse(pageSettingInfo.show);
                                 // 删除修改时间字段
-                                for (var key in this.listSetting) {
+                                for (let key in this.listSetting) {
                                     if (key === 'MODIFY_TIME') {
                                         delete this.listSetting[key];
                                         break
@@ -437,11 +514,17 @@
                                 this.idSetting = JSON.parse(pageSettingInfo.index);
                                 this.pageJumping();
                             }
+                            else {
+                                this.$message.error('网络异常，请重新加载');
+                                this.listLoading = false;
+                            }
                         }
                     )
                     .catch(
                         (error) => {
                             console.log(error);
+                            this.$message.error('网络异常，请重新加载');
+                            this.listLoading = false;
                         }
                     );
             },
