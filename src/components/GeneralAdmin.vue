@@ -81,7 +81,7 @@
                     <el-col :span="10">
                         <!--搜索框-->
                         <el-input placeholder="请输入内容" v-model="searchContent">
-                            <el-select slot="prepend" placeholder="请选择" v-model="searchKey" >
+                            <el-select slot="prepend" placeholder="请选择" v-model="searchKey">
                                 <el-option v-for="(value, key) in detailedSetting" :label='value.name' :value="key" :key="key"></el-option>
                             </el-select>
                             <el-button slot="append" @click="search" icon="el-icon-search" style="background-color: #409EFF;color: white">搜索</el-button>
@@ -180,7 +180,7 @@
                 updatingConfig: {},  // 更新配置
                 // 检索设置
                 searchKey: null,  // 检索的key
-                searchContent:''    // 检索的内容
+                searchContent: ''    // 检索的内容
             }
         },
         components: {
@@ -430,7 +430,7 @@
             // 获取最新数据
             getLatestData: function () {
                 this.getLatestDataLoading = true;
-                this.axios.get(this.apiUrl + '/generateUpgrade/' + this.$route.params.tableId + '?year=' + this.updatingConfig.year.value)
+                this.axios.get(this.apiUrl + '/generateUpgrade/' + this.$route.params.tableId + '?year=' + this.updatingConfig.year.value + '&flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2))
                     .then(
                         (res) => {
                             if (res.data === true) {
@@ -472,11 +472,11 @@
                 window.location.href = '/updated/results/' + this.$route.params.tableId;
             },
             // 检索
-            search:function(){
-                this.listLoading=true;
-                let searchData={};
-                searchData[this.searchKey]=this.searchContent;
-                this.axios.post(this.apiUrl + '/freeSearch/' + this.$route.params.tableId + '?page=' + this.pageNum + '&size=' + this.pageSize,searchData,
+            search: function () {
+                this.listLoading = true;
+                let searchData = {};
+                searchData[this.searchKey] = this.searchContent;
+                this.axios.post(this.apiUrl + '/freeSearch/' + this.$route.params.tableId + '?page=' + this.pageNum + '&size=' + this.pageSize, searchData,
                     {
                         headers: {
                             'Content-Type': 'application/json',
@@ -486,7 +486,7 @@
                         (res) => {
                             if (res.status === 200) {
                                 // 搜索结果条数
-                                this.totalSize=res.data.pop().totalSize;
+                                this.totalSize = res.data.pop().totalSize;
                                 // 保存的数据
                                 this.storeData = res.data;
                                 // 取消页面加载转态
@@ -503,7 +503,7 @@
                         (error) => {
                             console.log(error);
                             this.$message.error('网络异常，请重新尝试检索');
-                            this.listLoading=false;
+                            this.listLoading = false;
                         }
                     );
             },

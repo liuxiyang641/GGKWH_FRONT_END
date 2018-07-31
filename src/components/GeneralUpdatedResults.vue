@@ -79,10 +79,15 @@
             </el-alert>
             <el-main>
                 <el-row style="text-align: left; margin-bottom: 5px;">
-                    <el-col :span="8">
-                        <p>共有{{totalNum}}条数据 新增{{NumOfNewData}}条 已保存{{NumOfSavedData}}条 {{NumOfUpdateData}}条数据更新状态</p>
+                    <el-col :span="7">
+                        <span>共有{{totalNum}}条数据</span>
+                        <br>
+                        <span v-if="NumOfSavedData!==0">已保存{{NumOfSavedData}}条</span>
+                        <span v-if="NumOfNewData!==0">新增{{NumOfNewData}}条</span>
+                        <span v-if="NumOfUpdateData!==0">{{NumOfUpdateData}}条数据更新状态</span>
+                        <span v-if="NumOfSameData!==0">无更新{{NumOfSameData}}条</span>
                     </el-col>
-                    <el-col :span="10">
+                    <el-col :span="9">
                         <!--搜索框-->
                         <el-input placeholder="请输入内容" v-model="searchContent">
                             <el-select slot="prepend" placeholder="请选择" v-model="searchKey">
@@ -91,7 +96,7 @@
                             <el-button slot="append" @click="search" icon="el-icon-search" style="background-color: #409EFF;color: white">搜索</el-button>
                         </el-input>
                     </el-col>
-                    <el-col :span="6" style="padding-left: 10px">
+                    <el-col :span="8" style="padding-left: 10px">
                         <el-checkbox :indeterminate="isIndeterminate" v-model="checkAll" @change="handleCheckAllChange">全选</el-checkbox>
                         <el-checkbox-group v-model="checkedStatuses" @change="handleCheckedSingleChange">
                             <el-checkbox v-for="status in statuses" :label="status.status" :key="status.status">{{status.label}}</el-checkbox>
@@ -169,7 +174,7 @@
                                     @click.native=""
                                 ></el-button>
                             </el-button-group>
-                            <!--已保存数据状态-->
+                            <!--已保存与无更新数据状态-->
                             <el-button-group v-else-if='scope.row.status==="saved" || scope.row.status==="same"'>
                                 <el-button size="small" @click="showDialogOfSavedData(scope.row.data)">查看</el-button>
                             </el-button-group>
@@ -223,6 +228,7 @@
                 NumOfNewData: 0,     // 新增数据条数
                 NumOfUpdateData: 0,  // 数据更新状态数据条数
                 NumOfSavedData: 0, // 已保存的数据条数
+                NumOfSameData: 0,    // 相同的数据条数
                 // 加载状态控制
                 listLoading: false,     // 列表加载状态
                 submitModificationLoading: false,    // 提交修改按钮加载状态
@@ -237,11 +243,12 @@
                 searchKey: null,  // 检索的key
                 searchContent: '',   // 检索的内容
                 checkAll: true,    // 是否全选
-                checkedStatuses: ['update', 'saved', 'new'],  // 所有选择的状态
+                checkedStatuses: ['update', 'saved', 'new', 'same'],  // 所有选择的状态
                 statuses: [
                     {'status': 'update', 'label': '数据更新'},
                     {'status': 'new', 'label': '新增'},
                     {'status': 'saved', 'label': '已保存'},
+                    {'status': 'same', 'label': '无更新'},
                 ],
                 isIndeterminate: false  // 全选的不确定状态
             }
@@ -252,7 +259,7 @@
         computed: {},
         methods: {
             handleCheckAllChange(val) {
-                this.checkedStatuses = val ? ['update', 'saved', 'new'] : [];
+                this.checkedStatuses = val ? ['update', 'saved', 'new','same'] : [];
                 this.isIndeterminate = false;
             },
             handleCheckedSingleChange(value) {
@@ -410,12 +417,12 @@
                                     for (let index = 0, len = this.storeData.length; index < len; ++index) {
                                         this.$set(this.storeData[index], 'status', 'saved');
                                     }
+                                    this.NumOfSavedData += this.NumOfNewData+this.NumOfUpdateData;
                                     this.NumOfNewData = 0;
                                     this.NumOfUpdateData = 0;
-                                    this.NumOfSavedData = this.totalNum;
                                 }
                                 else {
-                                    this.$message.error('网络异常，请重新尝试');
+                                    this.$message.error('保存全部更新信息失败，请重新尝试');
                                 }
                             }
                         ).catch(
@@ -488,17 +495,9 @@
             },
             // 检索
             search: function () {
-                if (this.searchKey === '') {
-                    this.$message.warning('请选择检索字段');
-                    return;
-                }
-                if (this.searchContent === '') {
-                    this.$message.warning('请输入检索内容');
-                    return;
-                }
                 // 一种状态都没有选
                 if (this.checkedStatuses.length === 0) {
-                    this.$message.warning('请选择一种更新状态');
+                    this.$message.warning('请选择一种状态');
                     return;
                 }
                 this.listLoading = true;
@@ -507,10 +506,13 @@
                     'status': {
                         'update': true,
                         'new': true,
-                        'saved': true
+                        'saved': true,
+                        'same': true
                     }
                 };
-                searchData.condition[this.searchKey] = this.searchContent;   // 传入要检索的字段信息
+                if (this.searchKey !== null && this.searchContent === '') {
+                    searchData.condition[this.searchKey] = this.searchContent;   // 传入要检索的字段信息
+                }
                 // 没有全选状态
                 if (this.checkAll === false) {
                     if (this.checkedStatuses.indexOf('saved') === -1) {
@@ -521,6 +523,9 @@
                     }
                     if (this.checkedStatuses.indexOf('new') === -1) {
                         searchData.status.new = false;
+                    }
+                    if (this.checkedStatuses.indexOf('same') === -1) {
+                        searchData.status.same = false;
                     }
                 }
                 this.axios.post(this.apiUrl + '/searchUpgrade/' + this.$route.params.tableId + '?page=' + this.pageNum + '&size=' + this.pageSize, searchData,
@@ -538,6 +543,7 @@
                                 this.NumOfNewData = numbers.newCount;
                                 this.NumOfSavedData = numbers.savedCount;
                                 this.NumOfUpdateData = numbers.updateCount;
+                                this.NumOfSameData = numbers.sameCount;
                                 // 保存的数据
                                 this.storeData = res.data;
                                 // 取消页面加载转态
@@ -577,6 +583,7 @@
                                     this.NumOfNewData = numbers.newCount;
                                     this.NumOfSavedData = numbers.savedCount;
                                     this.NumOfUpdateData = numbers.updateCount;
+                                    this.NumOfSameData = numbers.sameCount;
                                     // 保存的数据
                                     this.storeData = res.data;
                                     // 取消页面加载转态
