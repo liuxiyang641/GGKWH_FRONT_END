@@ -123,7 +123,8 @@
                     <el-table-column label="状态"
                                      prop="status"
                                      width="100"
-                                     :filters="[{text:'被移除',value:'deleted'},{text:'新增',value:'new'},{text:'数据更新',value:'update'},{text:'已保存',value:'saved'}]"
+                                     :filters="[{text:'被移除',value:'deleted'},{text:'新增',value:'new'},
+                                     {text:'数据更新',value:'update'},{text:'已保存',value:'saved'},{text:'无更新',value:'same'}]"
                                      :filter-method="statusFilter">
                         <template slot-scope="scope">
                             <el-tag v-if='scope.row.status==="deleted"' type='danger'>
@@ -137,6 +138,9 @@
                             </el-tag>
                             <el-tag v-else-if='scope.row.status==="update"'>
                                 数据更新
+                            </el-tag>
+                            <el-tag v-else-if='scope.row.status==="same"' type="info">
+                                无更新
                             </el-tag>
                         </template>
                     </el-table-column>
@@ -166,7 +170,7 @@
                                 ></el-button>
                             </el-button-group>
                             <!--已保存数据状态-->
-                            <el-button-group v-else-if='scope.row.status==="saved"'>
+                            <el-button-group v-else-if='scope.row.status==="saved" || scope.row.status==="same"'>
                                 <el-button size="small" @click="showDialogOfSavedData(scope.row.data)">查看</el-button>
                             </el-button-group>
                             <!--新增数据相关操作-->
@@ -278,7 +282,7 @@
             submitModification: function () {
                 this.submitModificationLoading = true;
                 // 保存修改的数据的序号
-                let tempIndex = this.modifyingRowIndex - 1;
+                let tempIndex = this.modifyingRowIndex;
                 let tempData = {};
                 for (let key in this.detailedData) {
                     tempData[key] = this.detailedData[key].newValue;
@@ -295,7 +299,11 @@
                                         duration: 4000
                                     });
                                     // 修改前端数据
-                                    this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].data = this.detailedData;
+                                    let index = this.storeData.findIndex(
+                                        (x) => {
+                                            return x['index'] === tempIndex;
+                                        });
+                                    this.$set(this.storeData[index], 'data', this.detailedData);
                                     this.submitModificationLoading = false;
                                     // 两种对话框都保存
                                     this.dialogOfNewData = false;
@@ -319,7 +327,7 @@
                     ).catch(
                     (error) => {
                         console.log(error);
-                        this.$message.error('网络异常，请重新尝试');
+                        this.$message.error('其它异常，请重新尝试');
                         this.submitModificationLoading = false;
                     });
             },
@@ -330,7 +338,7 @@
                     cancelButtonText: '取消',
                     type: 'info'
                 }).then(() => {
-                    let tempIndex = rowIndex - 1;
+                    let tempIndex = rowIndex;
                     let requestUrl = this.apiUrl + '/upgradeSave/' + this.$route.params.tableId +
                         '?index=' + tempIndex + '&flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2);
                     this.axios.get(requestUrl)
@@ -342,12 +350,17 @@
                                         message: '保存成功!'
                                     });
                                     // 设置数据条数
-                                    if (this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].status === 'update')
+                                    // 修改前端数据
+                                    let index = this.storeData.findIndex(
+                                        (x) => {
+                                            return x['index'] === tempIndex;
+                                        });
+                                    if (this.storeData[index].status === 'update')
                                         this.NumOfUpdateData -= 1;
-                                    else if (this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].status === 'new')
+                                    else if (this.storeData[index].status === 'new')
                                         this.NumOfNewData -= 1;
                                     // 更改为保存状态
-                                    this.$set(this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize], 'status', 'saved');
+                                    this.$set(this.storeData[index], 'status', 'saved');
                                     // 保存数据条数+1
                                     this.NumOfSavedData += 1;
                                 }
@@ -429,7 +442,7 @@
                     cancelButtonText: '取消',
                     type: 'warning'
                 }).then(() => {
-                    let tempIndex = rowIndex - 1;
+                    let tempIndex = rowIndex;
                     let requestUrl = this.apiUrl + '/upgrade/delete/' + this.$route.params.tableId + '?index=' + tempIndex;
                     this.axios.get(requestUrl)
                         .then(
@@ -441,11 +454,16 @@
                                     });
                                     // 数据量减一
                                     this.totalNum -= 1;
-                                    if (this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].status === 'update')
+                                    // 修改前端数据
+                                    let index = this.storeData.findIndex(
+                                        (x) => {
+                                            return x['index'] === tempIndex;
+                                        });
+                                    if (this.storeData[index].status === 'update')
                                         this.NumOfUpdateData -= 1;
-                                    else if (this.storeData[tempIndex - (this.pageNum - 1) * this.pageSize].status === 'new')
+                                    else if (this.storeData[index].status === 'new')
                                         this.NumOfNewData -= 1;
-                                    this.storeData.splice(tempIndex - (this.pageNum - 1) * this.pageSize, 1);
+                                    this.storeData.splice(index, 1);
                                 }
                                 else {
                                     this.$message.error('网络异常，请重新加载');
@@ -522,10 +540,6 @@
                                 this.NumOfUpdateData = numbers.updateCount;
                                 // 保存的数据
                                 this.storeData = res.data;
-                                // 为每一条数据添加序号，从1开始
-                                for (let i = 0; i < this.storeData.length; ++i) {
-                                    this.storeData[i]['index'] = (this.pageNum - 1) * this.pageSize + (i + 1);
-                                }
                                 // 取消页面加载转态
                                 this.listLoading = false;
                                 window.location.href = '#top';
@@ -565,10 +579,6 @@
                                     this.NumOfUpdateData = numbers.updateCount;
                                     // 保存的数据
                                     this.storeData = res.data;
-                                    // 为每一条数据添加序号，从1开始
-                                    for (let i = 0; i < this.storeData.length; ++i) {
-                                        this.storeData[i]['index'] = (this.pageNum - 1) * this.pageSize + (i + 1);
-                                    }
                                     // 取消页面加载转态
                                     this.listLoading = false;
                                     window.location.href = '#top';

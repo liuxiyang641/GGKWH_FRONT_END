@@ -1,6 +1,6 @@
 <template>
     <div id="app">
-            <el-header style="width: 100%; margin: 0">
+            <el-header style="width: 100%; margin: 0;padding: 0">
                 <el-menu
                     mode="horizontal"
                     background-color="#545c64"
@@ -13,7 +13,7 @@
                     </el-menu-item>
                 </el-menu>
             </el-header>
-            <el-main>
+            <el-main style="width: 100%; margin: 0;padding: 0">
                 <router-view/>
             </el-main>
     </div>
@@ -31,5 +31,8 @@
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
     }
 </style>
