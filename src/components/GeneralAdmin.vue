@@ -171,6 +171,7 @@
                 pageNum: 1,
                 pageSize: 20,
                 totalSize: 0,
+                isSearchingResults: false,   // 当前是否处于搜索结果状态
                 // 页面设置
                 listSetting: {},     // 信息列表设置，包含key和对应的中文名
                 detailedSetting: {},   // 详细信息设置，包含key，中文名以及是否可编辑
@@ -180,7 +181,8 @@
                 updatingConfig: {},  // 更新配置
                 // 检索设置
                 searchKey: null,  // 检索的key
-                searchContent: ''    // 检索的内容
+                searchContent: '',   // 检索的内容
+                searchingData: {}    // 搜索传递的内容
             }
         },
         components: {
@@ -471,12 +473,10 @@
             viewLatestData: function () {
                 window.location.href = '/updated/results/' + this.$route.params.tableId;
             },
-            // 检索
-            search: function () {
+            // 加载搜索结果
+            loadingSearchingResults: function () {
                 this.listLoading = true;
-                let searchData = {};
-                searchData[this.searchKey] = this.searchContent;
-                this.axios.post(this.apiUrl + '/freeSearch/' + this.$route.params.tableId + '?page=' + this.pageNum + '&size=' + this.pageSize, searchData,
+                this.axios.post(this.apiUrl + '/freeSearch/' + this.$route.params.tableId + '?page=' + this.pageNum + '&size=' + this.pageSize, this.searchingData,
                     {
                         headers: {
                             'Content-Type': 'application/json',
@@ -507,9 +507,8 @@
                         }
                     );
             },
-            // 页面跳转请求
-            pageJumping: function () {
-                this.listLoading = true;
+            // 加载所有结果
+            loadingAllData: function () {
                 let requestUrl = this.apiUrl + '/display/' + this.$route.params.tableId + '?page=' + this.pageNum + '&size=' +
                     this.pageSize + '&flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2);
                 this.axios.get(requestUrl)
@@ -533,6 +532,35 @@
                         this.$message.error('网络异常，请重新加载');
                         this.listLoading = false;
                     });
+            },
+            // 检索
+            search: function () {
+                if (this.searchContent === '') {   // 如果没有搜索内容就按加载所有data来加载
+                    this.isSearchingResults = false;
+                    this.pageNum = 1;
+                    this.getPageSetting();
+                    this.loadingAllData();
+                }
+                else {
+                    if (this.searchKey === null) {
+                        this.$message.warning('请选择一个搜索字段');
+                        return;
+                    }
+                    this.pageNum = 1;
+                    this.isSearchingResults = true;      // 切换至搜索状态
+                    this.searchingData[this.searchKey] = this.searchContent;
+                    this.loadingSearchingResults();
+                }
+            },
+            // 页面跳转请求
+            pageJumping: function () {
+                this.listLoading = true;
+                if (this.isSearchingResults === true) {    // 若处于搜索状态
+                    this.loadingSearchingResults();
+                }
+                else {
+                    this.loadingAllData();
+                }
             },
             // 获取页面setting
             getPageSetting: function () {

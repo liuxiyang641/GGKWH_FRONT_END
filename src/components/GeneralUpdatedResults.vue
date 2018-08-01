@@ -18,7 +18,7 @@
                 <el-form label-width="5rem" :model="detailedData" v-if='JSON.stringify(this.detailedData)!=="{}" '>
                     <el-form-item v-for="(value, key) in detailedSetting" :label='value.name+": " ' :key="key">
                         <el-input v-if='value.modify==="true" ' auto-complete="off" type="textarea" autosize v-model="detailedData[key].newValue"></el-input>
-                        <span v-else>{{detailedData[key].newValue}}</span>
+                        <span v-else class="span1">{{detailedData[key].newValue}}</span>
                     </el-form-item>
                 </el-form>
                 <div slot="footer" class="dialog-footer">
@@ -32,7 +32,7 @@
                 <!--保证this.detailedDatab不是一个空对象，否则在初始化绑定时会报错-->
                 <el-form label-width="5rem" :model="detailedData" v-if='JSON.stringify(this.detailedData)!=="{}" '>
                     <el-form-item v-for="(value, key) in detailedSetting" :label='value.name+": " ' :key="key">
-                        <span>{{detailedData[key].newValue}}</span>
+                        <span class="span1">{{detailedData[key].newValue}}</span>
                     </el-form-item>
                 </el-form>
                 <div slot="footer" class="dialog-footer">
@@ -45,9 +45,11 @@
                     <el-row>
                         <el-col :span="12">
                             <el-row style="font-size: 20px;text-align: center">原数据</el-row>
-                            <el-form-item v-for="(value, key) in detailedSetting" :key="key" :label='value.name+": " '>
-                                <span>{{detailedData[key].oldValue}}</span>
-                            </el-form-item>
+                            <el-row>
+                                <el-form-item v-for="(value, key) in detailedSetting" :key="key" :label='value.name+": " '>
+                                    <span class="span1">{{detailedData[key].oldValue}}</span>
+                                </el-form-item>
+                            </el-row>
                         </el-col>
                         <el-col :span="12" style="border-left: 2px solid #eee">
                             <el-row style="font-size: 20px;text-align: center">新数据</el-row>
@@ -59,7 +61,7 @@
                                     {{value.name+": "}}
                                 </label>
                                 <el-input v-if='value.modify==="true" ' auto-complete="off" type="textarea" autosize v-model="detailedData[key].newValue"></el-input>
-                                <span v-else>{{detailedData[key].newValue}}</span>
+                                <span v-else class="span1">{{detailedData[key].newValue}}</span>
                             </el-form-item>
                         </el-col>
                     </el-row>
@@ -224,6 +226,7 @@
                 // 分页控制
                 pageNum: 1,
                 pageSize: 20,
+                isSearchingResults: false,   // 当前是否处于搜索结果状态
                 totalNum: 0,   // 总条数
                 NumOfNewData: 0,     // 新增数据条数
                 NumOfUpdateData: 0,  // 数据更新状态数据条数
@@ -250,7 +253,8 @@
                     {'status': 'saved', 'label': '已保存'},
                     {'status': 'same', 'label': '无更新'},
                 ],
-                isIndeterminate: false  // 全选的不确定状态
+                isIndeterminate: false, // 全选的不确定状态
+                searchingData: {}
             }
         },
         components: {
@@ -259,7 +263,7 @@
         computed: {},
         methods: {
             handleCheckAllChange(val) {
-                this.checkedStatuses = val ? ['update', 'saved', 'new','same'] : [];
+                this.checkedStatuses = val ? ['update', 'saved', 'new', 'same'] : [];
                 this.isIndeterminate = false;
             },
             handleCheckedSingleChange(value) {
@@ -417,7 +421,7 @@
                                     for (let index = 0, len = this.storeData.length; index < len; ++index) {
                                         this.$set(this.storeData[index], 'status', 'saved');
                                     }
-                                    this.NumOfSavedData += this.NumOfNewData+this.NumOfUpdateData;
+                                    this.NumOfSavedData += this.NumOfNewData + this.NumOfUpdateData;
                                     this.NumOfNewData = 0;
                                     this.NumOfUpdateData = 0;
                                 }
@@ -493,42 +497,10 @@
                     });
                 });
             },
-            // 检索
-            search: function () {
-                // 一种状态都没有选
-                if (this.checkedStatuses.length === 0) {
-                    this.$message.warning('请选择一种状态');
-                    return;
-                }
+            // 加载搜索结果
+            loadingSearchingResults: function () {
                 this.listLoading = true;
-                let searchData = {        // 构造传递参数
-                    'condition': {},
-                    'status': {
-                        'update': true,
-                        'new': true,
-                        'saved': true,
-                        'same': true
-                    }
-                };
-                if (this.searchKey !== null && this.searchContent === '') {
-                    searchData.condition[this.searchKey] = this.searchContent;   // 传入要检索的字段信息
-                }
-                // 没有全选状态
-                if (this.checkAll === false) {
-                    if (this.checkedStatuses.indexOf('saved') === -1) {
-                        searchData.status.saved = false;
-                    }
-                    if (this.checkedStatuses.indexOf('update') === -1) {
-                        searchData.status.update = false;
-                    }
-                    if (this.checkedStatuses.indexOf('new') === -1) {
-                        searchData.status.new = false;
-                    }
-                    if (this.checkedStatuses.indexOf('same') === -1) {
-                        searchData.status.same = false;
-                    }
-                }
-                this.axios.post(this.apiUrl + '/searchUpgrade/' + this.$route.params.tableId + '?page=' + this.pageNum + '&size=' + this.pageSize, searchData,
+                this.axios.post(this.apiUrl + '/searchUpgrade/' + this.$route.params.tableId + '?page=' + this.pageNum + '&size=' + this.pageSize, this.searchingData,
                     {
                         headers: {
                             'Content-Type': 'application/json',
@@ -564,14 +536,8 @@
                         }
                     );
             },
-            // 点击页数触发事件
-            handelCurrentChange: function (val) {
-                this.pageNum = val;
-                this.pageJumping();
-            },
-            // 页面跳转请求
-            pageJumping: function () {
-                this.listLoading = true;
+            // 加载所有结果
+            loadingAllData: function () {
                 this.axios.get(this.apiUrl + '/upgrade/' + this.$route.params.tableId + '?page=' + this.pageNum + '&size=' + this.pageSize)
                     .then(
                         (res) => {
@@ -606,6 +572,64 @@
                         this.$message.error('网络异常，请重新加载');
                         this.listLoading = false;
                     });
+            },
+            // 检索
+            search: function () {
+                this.pageNum = 1;   // 从第一页开始展示搜索结果
+                if (this.checkAll===true && this.searchContent === '') {    // 如果全选并且没有搜索内容时不处于搜索状态
+                    this.isSearchingResults=false;
+                    this.pageJumping();
+                }
+                else {  // 处于搜索状态
+                    this.isSearchingResults = true;
+                    // 一种状态都没有选
+                    if (this.checkedStatuses.length === 0) {
+                        this.$message.warning('请选择一种状态');
+                        return;
+                    }
+                    this.searchingData = {  // 构造搜索参数
+                        'condition': {},
+                        'status': {
+                            'update': true,
+                            'new': true,
+                            'saved': true,
+                            'same': true
+                        }
+                    };
+                    if (this.searchKey !== null && this.searchContent !== '') {
+                        this.searchingData.condition[this.searchKey] = this.searchContent;   // 传入要检索的字段信息
+                    }
+                    if (this.checkAll !== true) {
+                        if (this.checkedStatuses.indexOf('saved') === -1) {
+                            this.searchingData.status.saved = false;
+                        }
+                        if (this.checkedStatuses.indexOf('update') === -1) {
+                            this.searchingData.status.update = false;
+                        }
+                        if (this.checkedStatuses.indexOf('new') === -1) {
+                            this.searchingData.status.new = false;
+                        }
+                        if (this.checkedStatuses.indexOf('same') === -1) {
+                            this.searchingData.status.same = false;
+                        }
+                    }
+                    this.loadingSearchingResults();
+                }
+            },
+            // 点击页数触发事件
+            handelCurrentChange: function (val) {
+                this.pageNum = val;
+                this.pageJumping();
+            },
+            // 页面跳转请求
+            pageJumping: function () {
+                this.listLoading = true;
+                if (this.isSearchingResults === true) {    // 若处于搜索结果
+                    this.loadingSearchingResults();
+                }
+                else {
+                    this.loadingAllData();
+                }
             },
             // 获取页面setting
             getPageSetting: function () {
@@ -686,6 +710,13 @@
         line-clamp: 2;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
+    }
+
+    .span1 {
+        height: auto;
+        word-wrap: break-word;
+        word-break: break-all;
+        overflow: hidden;
     }
 
     .el-aside {
