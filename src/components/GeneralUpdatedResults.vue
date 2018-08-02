@@ -7,7 +7,7 @@
                     <el-col :span="12">
                         <span>{{pageName}}更新结果</span>
                     </el-col>
-                    <el-col :span="12" style="text-align: right">
+                    <el-col :span="12" style="text-align: right" v-if="isSavingAllData===false">
                         <el-button type="primary" round @click="saveAllData">保存更新结果</el-button>
                     </el-col>
                 </el-row>
@@ -79,7 +79,11 @@
                 description="暂无更新结果，请返回上一页面先获取最新数据"
                 show-icon>
             </el-alert>
-            <el-main>
+            <el-main v-if="isSavingAllData===true">
+                <el-progress :text-inside="true" :stroke-width="36" :percentage="savingPercentage" status="success" ></el-progress>
+                <span>正在保存更新结果中,请勿退出更新结果页面...</span>
+            </el-main>
+            <el-main v-if="isSavingAllData===false">
                 <el-row style="text-align: left; margin-bottom: 5px;">
                     <el-col :span="7">
                         <span>共有{{totalNum}}条数据</span>
@@ -254,7 +258,11 @@
                     {'status': 'same', 'label': '无更新'},
                 ],
                 isIndeterminate: false, // 全选的不确定状态
-                searchingData: {}
+                searchingData: {} ,  // 检索数据
+                // 保存所有更新结果设置
+                isSavingAllData:false, // 是否正在保存所有更新结果
+                savingPercentage:0, // 更新进度
+                ws:null,    // 保存所有结果的WebSocket
             }
         },
         components: {
@@ -408,38 +416,54 @@
                     cancelButtonText: '取消',
                     type: 'info'
                 }).then(() => {
-                    let requestUrl = this.apiUrl + '/upgrade/saveAll/' + this.$route.params.tableId + '?flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2);
-                    this.axios.get(requestUrl)
-                        .then(
-                            (res) => {
-                                if (res.data === true) {
-                                    this.$message({
-                                        type: 'success',
-                                        message: '所有数据已经成功保存!'
-                                    });
-                                    // 更改为保存状态
-                                    for (let index = 0, len = this.storeData.length; index < len; ++index) {
-                                        this.$set(this.storeData[index], 'status', 'saved');
-                                    }
-                                    this.NumOfSavedData += this.NumOfNewData + this.NumOfUpdateData;
-                                    this.NumOfNewData = 0;
-                                    this.NumOfUpdateData = 0;
-                                }
-                                else {
-                                    this.$message.error('保存全部更新信息失败，请重新尝试');
-                                }
-                            }
-                        ).catch(
-                        (error) => {
-                            console.log(error);
-                            this.$notify({
-                                title: '失败',
-                                message: '网络异常',
-                                type: 'warning',
-                                duration: 4000
-                            });
-                        });
+                    // this.listLoading = true;
+                    // let requestUrl = this.apiUrl + '/upgrade/saveAll/' + this.$route.params.tableId + '?flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2);
+                    // this.axios.get(requestUrl)
+                    //     .then(
+                    //         (res) => {
+                    //             if (res.data === true) {
+                    //                 this.listLoading = false;
+                    //                 this.$message({
+                    //                     type: 'success',
+                    //                     message: '所有数据已经成功保存!'
+                    //                 });
+                    //                 // 更改为保存状态
+                    //                 for (let index = 0, len = this.storeData.length; index < len; ++index) {
+                    //                     this.$set(this.storeData[index], 'status', 'saved');
+                    //                 }
+                    //                 this.NumOfSavedData += this.NumOfNewData + this.NumOfUpdateData;
+                    //                 this.NumOfNewData = 0;
+                    //                 this.NumOfUpdateData = 0;
+                    //             }
+                    //             else {
+                    //                 this.listLoading = false;
+                    //                 this.$message.error('保存全部更新信息失败，请重新尝试');
+                    //             }
+                    //         }
+                    //     ).catch(
+                    //     (error) => {
+                    //         this.listLoading = false;
+                    //         console.log(error);
+                    //         this.$notify({
+                    //             title: '失败',
+                    //             message: '网络异常',
+                    //             type: 'warning',
+                    //             duration: 4000
+                    //         });
+                    //     });
+                    this.isSavingAllData=true;  // 开始保存所有更新结果
+                    let wsUrl=this.apiUrl.replace('http','ws')+'/websocket/'+this.$route.params.tableId+'/'+ (this.idSetting.isDigit === 'true' ? 1 : 2);
+                    console.log(wsUrl);
+                    this.ws=new WebSocket(wsUrl);
+                    this.ws.onmessage = (event)=> {
+                        this.savingPercentage=event.data;
+                    };
+                    this.ws.onerror = (event)=>  {
+                        console.log(event);
+                        this.$message.error('网络连接异常，保存失败，请重新尝试保存');
+                    };
                 }).catch(() => {
+                    this.listLoading = false;
                     this.$message({
                         type: 'info',
                         message: '已取消删除'
@@ -576,8 +600,8 @@
             // 检索
             search: function () {
                 this.pageNum = 1;   // 从第一页开始展示搜索结果
-                if (this.checkAll===true && this.searchContent === '') {    // 如果全选并且没有搜索内容时不处于搜索状态
-                    this.isSearchingResults=false;
+                if (this.checkAll === true && this.searchContent === '') {    // 如果全选并且没有搜索内容时不处于搜索状态
+                    this.isSearchingResults = false;
                     this.pageJumping();
                 }
                 else {  // 处于搜索状态
@@ -654,7 +678,7 @@
                                 // 详细信息配置
                                 this.detailedSetting = JSON.parse(pageSettingInfo.all);
                                 // 删除修改时间字段
-                                for (var key in this.detailedSetting) {
+                                for (let key in this.detailedSetting) {
                                     if (key === 'MODIFY_TIME') {
                                         delete this.detailedSetting[key];
                                         break
@@ -688,8 +712,10 @@
             statusFilter: function (value, row) {
                 return row.status === value
             },
+
         },
         created: function () {
+
             this.getPageSetting();
         },
     }
