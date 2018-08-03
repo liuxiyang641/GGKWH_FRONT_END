@@ -8,7 +8,10 @@
                         <span>{{pageName}}更新结果</span>
                     </el-col>
                     <el-col :span="12" style="text-align: right" v-if="isSavingAllData===false">
-                        <el-button type="primary" round @click="saveAllData">保存更新结果</el-button>
+                        <el-button type="primary" round @click="saveAllData" :disabled="this.totalNum===this.NumOfSavedData+this.NumOfSameData">
+                            <span v-if="this.totalNum!==this.NumOfSavedData+this.NumOfSameData">保存更新结果</span>
+                            <span class="span1" v-else>已保存所有更新结果</span>
+                        </el-button>
                     </el-col>
                 </el-row>
             </el-header>
@@ -79,8 +82,9 @@
                 description="暂无更新结果，请返回上一页面先获取最新数据"
                 show-icon>
             </el-alert>
+            <!--保存全部更新结果进度条-->
             <el-main v-if="isSavingAllData===true">
-                <el-progress :text-inside="true" :stroke-width="36" :percentage="savingPercentage" status="success" ></el-progress>
+                <el-progress :text-inside="true" :stroke-width="36" :percentage="savingPercentage" status="success"></el-progress>
                 <span>正在保存更新结果中,请勿退出更新结果页面...</span>
             </el-main>
             <el-main v-if="isSavingAllData===false">
@@ -258,11 +262,11 @@
                     {'status': 'same', 'label': '无更新'},
                 ],
                 isIndeterminate: false, // 全选的不确定状态
-                searchingData: {} ,  // 检索数据
+                searchingData: {},  // 检索数据
                 // 保存所有更新结果设置
-                isSavingAllData:false, // 是否正在保存所有更新结果
-                savingPercentage:0, // 更新进度
-                ws:null,    // 保存所有结果的WebSocket
+                isSavingAllData: false, // 是否正在保存所有更新结果
+                savingPercentage: 0, // 更新进度
+                ws: null,    // 保存所有结果的WebSocket
             }
         },
         components: {
@@ -291,7 +295,7 @@
                 this.detailedData = JSON.parse(JSON.stringify(rowData));
                 this.dialogOfSavedData = true;
             },
-            // 他们出update数据详细信息对话框
+            // 弹出update数据详细信息对话框
             showDialogOfUpdateData: function (rowData, rowIndex) {
                 this.detailedData = JSON.parse(JSON.stringify(rowData));
                 this.modifyingRowIndex = rowIndex;
@@ -416,51 +420,46 @@
                     cancelButtonText: '取消',
                     type: 'info'
                 }).then(() => {
-                    // this.listLoading = true;
-                    // let requestUrl = this.apiUrl + '/upgrade/saveAll/' + this.$route.params.tableId + '?flag=' + (this.idSetting.isDigit === 'true' ? 1 : 2);
-                    // this.axios.get(requestUrl)
-                    //     .then(
-                    //         (res) => {
-                    //             if (res.data === true) {
-                    //                 this.listLoading = false;
-                    //                 this.$message({
-                    //                     type: 'success',
-                    //                     message: '所有数据已经成功保存!'
-                    //                 });
-                    //                 // 更改为保存状态
-                    //                 for (let index = 0, len = this.storeData.length; index < len; ++index) {
-                    //                     this.$set(this.storeData[index], 'status', 'saved');
-                    //                 }
-                    //                 this.NumOfSavedData += this.NumOfNewData + this.NumOfUpdateData;
-                    //                 this.NumOfNewData = 0;
-                    //                 this.NumOfUpdateData = 0;
-                    //             }
-                    //             else {
-                    //                 this.listLoading = false;
-                    //                 this.$message.error('保存全部更新信息失败，请重新尝试');
-                    //             }
-                    //         }
-                    //     ).catch(
-                    //     (error) => {
-                    //         this.listLoading = false;
-                    //         console.log(error);
-                    //         this.$notify({
-                    //             title: '失败',
-                    //             message: '网络异常',
-                    //             type: 'warning',
-                    //             duration: 4000
-                    //         });
-                    //     });
-                    this.isSavingAllData=true;  // 开始保存所有更新结果
-                    let wsUrl=this.apiUrl.replace('http','ws')+'/websocket/'+this.$route.params.tableId+'/'+ (this.idSetting.isDigit === 'true' ? 1 : 2);
+                    this.isSavingAllData = true;  // 开始保存所有更新结果
+                    let wsUrl = this.apiUrl.replace('http', 'ws') + '/websocket/' + this.$route.params.tableId + '/' + (this.idSetting.isDigit === 'true' ? 1 : 2);
                     console.log(wsUrl);
-                    this.ws=new WebSocket(wsUrl);
-                    this.ws.onmessage = (event)=> {
-                        this.savingPercentage=event.data;
+                    this.ws = new WebSocket(wsUrl);
+                    this.ws.onopen = () => {
+                        this.ws.send('start');
                     };
-                    this.ws.onerror = (event)=>  {
+                    let savingComplete=false;   // 统计是否完成全部保存
+                    this.ws.onmessage = (event) => {
+                        let temp = parseInt(event.data);
+                        if (temp === 101) {
+                            this.$message.success('所有更新结果保存完成！');
+                            savingComplete=true;
+                            this.ws.close();
+                            this.isSavingAllData = false;
+                            this.pageNum = 1;
+                            this.pageJumping();
+                        } else if (temp === -1) {
+                            this.$message.error('保存所有更新结果失败，请重新尝试保存');
+                            this.ws.close();
+                            this.isSavingAllData = false;
+                            this.pageNum = 1;
+                            this.pageJumping();
+                        }
+                        else {
+                            this.savingPercentage = temp;
+                        }
+                    };
+                    this.ws.onerror = (event) => {
                         console.log(event);
                         this.$message.error('网络连接异常，保存失败，请重新尝试保存');
+                    };
+                    this.ws.onclose=(event)=>{
+                        // 没有保存完就socket中断
+                        if (savingComplete===false){
+                            this.$message.warning('网络连接中断，保存未全部完成，请重新尝试，继续保存');
+                            this.isSavingAllData=false;
+                            this.pageNum = 1;
+                            this.pageJumping();
+                        }
                     };
                 }).catch(() => {
                     this.listLoading = false;
@@ -715,8 +714,52 @@
 
         },
         created: function () {
-
             this.getPageSetting();
+        },
+        beforeDestroy: function () {
+            if (this.isSavingAllData === true) {
+                this.$confirm('现在正在保存更新结果，确认要离开当前页面吗？离开无法继续保存结果', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'info'
+                }).then(() => {
+                    if (this.ws !== null) {
+                        this.ws.close();
+                    }
+                    this.isSavingAllData = false;
+                });
+            }
+        },
+        deactivated: function () {
+            if (this.isSavingAllData === true) {
+                this.$confirm('现在正在保存更新结果，确认要离开当前页面吗？离开无法继续保存结果', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'info'
+                }).then(() => {
+                    if (this.ws !== null) {
+                        this.ws.close();
+                    }
+                    this.isSavingAllData = false;
+                });
+            }
+        },
+        beforeRouteLeave: function (to, from, next) {
+            if (this.isSavingAllData === true) {
+                this.$confirm('现在正在保存更新结果，确认要离开当前页面吗？离开无法继续保存结果', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'info'
+                }).then(() => {
+                    if (this.ws !== null) {
+                        this.ws.close();
+                    }
+                    this.isSavingAllData = false;
+                    next()
+                }).catch(() => {
+                    next(false);
+                });
+            }
         },
     }
 </script>

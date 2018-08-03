@@ -87,9 +87,15 @@
                             this.listLoading=false;
                             window.location.href='#top';
                         }
+                        else {
+                            this.$message.error('网络异常，请刷新重试');
+                            this.listLoading = false;
+                        }
                     }
-                ).catch(function (error) {
+                ).catch((error)=> {
                     console.log(error);
+                    this.$message.error('网络异常，请刷新重试');
+                    this.listLoading = false;
                 });
             }
         },
