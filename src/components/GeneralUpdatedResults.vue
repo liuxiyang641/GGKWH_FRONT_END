@@ -49,7 +49,7 @@
                         <el-col :span="12">
                             <el-row style="font-size: 20px;text-align: center">原数据</el-row>
                             <el-row>
-                                <el-form-item v-for="(value, key) in detailedSetting" :key="key" :label='value.name+": " '>
+                                <el-form-item v-for="(value, key) in detailedSetting" :key="key" :label='value.name+": " ' style="margin-bottom: 0;">
                                     <span class="span1">{{detailedData[key].oldValue}}</span>
                                 </el-form-item>
                             </el-row>
@@ -421,13 +421,12 @@
                     type: 'info'
                 }).then(() => {
                     this.isSavingAllData = true;  // 开始保存所有更新结果
-                    let wsUrl = this.apiUrl.replace('http', 'ws') + '/websocket/' + this.$route.params.tableId + '/' + (this.idSetting.isDigit === 'true' ? 1 : 2);
-                    console.log(wsUrl);
-                    this.ws = new WebSocket(wsUrl);
-                    this.ws.onopen = () => {
+                    let wsUrl = this.apiUrl.replace('http', 'ws') + '/websocket/' + this.$route.params.tableId;
+                    this.ws = new WebSocket(wsUrl);     // 创建websocket对象
+                    this.ws.onopen = () => {    // 先发送一个消息，开始保存所有更新数据
                         this.ws.send('start');
                     };
-                    let savingComplete=false;   // 统计是否完成全部保存
+                    let savingComplete=false;   // 统计是否完成全部保存，防止ws的断开
                     this.ws.onmessage = (event) => {
                         let temp = parseInt(event.data);
                         if (temp === 101) {
@@ -683,7 +682,7 @@
                                         break
                                     }
                                 }
-                                // 可编辑信息配置
+                                // 找出可编辑信息配置
                                 Object.keys(this.detailedSetting).forEach(
                                     (key) => {
                                         if (this.detailedSetting[key].modify === 'true') {
@@ -782,9 +781,9 @@
     }
 
     .span1 {
-        height: auto;
         word-wrap: break-word;
         word-break: break-all;
+        white-space:normal;
         overflow: hidden;
     }
 

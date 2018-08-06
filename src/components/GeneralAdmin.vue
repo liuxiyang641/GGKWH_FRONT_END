@@ -8,8 +8,11 @@
                         <span>{{pageName}}信息列表</span>
                     </el-col>
                     <el-col :span="12" style="text-align: right">
+                        <!--更新源配置-->
                         <i class="el-icon-setting" style="margin-right: 1rem;" @click="dialogOfConfig=true"></i>
+                        <!--获取更新数据-->
                         <el-button type="primary" round @click="showUpdatingDialog">更新</el-button>
+                        <!--查看更新结果-->
                         <el-button type="primary" round
                                    @click="viewLatestData">
                             查看更新结果

@@ -40,15 +40,14 @@
         name: "LibraryList",
         data:function () {
             return {
-                tableData:[],
-                pageNum:1,
-                pageSize:10,
-                listLoading:true
+                tableData:[],   // 当前页数据
+                pageNum:1,  // 当前页数
+                pageSize:10,    // 一页的数量
+                listLoading:true    // 列表加载状态控制
             }
         },
-        computed:{
-        },
         methods:{
+            // 管理 按钮的跳转函数
             jumpTo:function (row) {
                 switch (row.name){
                     // 长江学者
@@ -63,15 +62,17 @@
                     case 'GG_ZJ_GCYYS':
                         window.location.href='/admin/acaofsci';
                         break;
-                    default: //默认跳转到长江学者列表
+                    default: //其它默认跳转到长江学者列表
                         window.location.href='/admin/18';
                         break;
                 }
             },
+            // 点击页数时事件触发
             handelCurrentChange(val){
                 this.pageNum=val;
                 this.pageJumping();
             },
+            // 页面跳转函数
             pageJumping:function(){
                 this.listLoading=true;
                 this.axios.get(this.apiUrl+'/getAll?page='+this.pageNum+'&size='+this.pageSize,
@@ -99,6 +100,7 @@
                 });
             }
         },
+        // 组件创建的时候执行
         created:function () {
             this.pageJumping();
         }
@@ -106,6 +108,5 @@
 </script>
 
 <style scoped>
-.el-container{
-}
+
 </style>
