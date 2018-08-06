@@ -16,7 +16,7 @@ For a detailed explanation on how things work, check out the [guide](http://vuej
 
 ## 项目说明
 ### 总体说明
-1. 模块化搭建的vue项目，首先确保安装了[node.js](https://nodejs.org/zh-cn/)，请按照[Build Setup](#Build Setup)来本地运行项目。
+1. 模块化搭建的vue项目，首先确保安装了[node.js](https://nodejs.org/zh-cn/)，请按照Build Setup来本地运行项目。
 2. 使用了[axios](https://github.com/axios/axios)向后端请求数据，请求的url在*main.js*的*Vue.prototype.apiUrl*中定义，
 引入*websocket*实现保存所有结果进度条加载 
 3. 使用了[ElementUI](http://element-cn.eleme.io/#/zh-CN/component/installation)来构建前端  
