@@ -11,7 +11,7 @@
                 <el-table-column prop="id" label="ID">
                 </el-table-column>
                 <el-table-column
-                    prop="chineseName"
+                    prop="chinese_name"
                     label="公共库名称"
                     style="width: fit-content">
                 </el-table-column>
