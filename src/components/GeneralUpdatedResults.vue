@@ -181,7 +181,7 @@
                                     type="danger"
                                     icon="el-icon-delete"
                                     size="small"
-                                    @click.native=""
+                                    @click.native="del(scope.row.index)"
                                 ></el-button>
                             </el-button-group>
                             <!--已保存与无更新数据状态-->

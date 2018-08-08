@@ -11,7 +11,7 @@ Vue.config.productionTip = false;
 Vue.use(ElementUI);
 Vue.prototype.axios = axios;
 // api的URL
-Vue.prototype.apiUrl = 'http://55b75b67.ngrok.io';
+Vue.prototype.apiUrl = 'http://ab6159bc.ngrok.io';
 /* eslint-disable no-new */
 new Vue({
     el: '#app',
